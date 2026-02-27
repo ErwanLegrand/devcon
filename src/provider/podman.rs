@@ -21,7 +21,7 @@ pub struct Podman {
 
 impl Provider for Podman {
     fn build(&self, use_cache: bool) -> Result<bool> {
-        let tag = format!("{}/{}", "devcon", &self.name);
+        let tag = format!("{}/{}", "devcont", &self.name);
 
         let mut command = Command::new(&self.command);
         command
@@ -47,7 +47,7 @@ impl Provider for Podman {
     }
 
     fn create(&self, args: Vec<String>) -> Result<bool> {
-        let tag = format!("{}/{}", "devcon", &self.name);
+        let tag = format!("{}/{}", "devcont", &self.name);
 
         let mut command = Command::new(&self.command);
         command.arg("create");

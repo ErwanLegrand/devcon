@@ -24,7 +24,7 @@ pub struct Settings {
 
 impl Settings {
     pub fn load() -> Self {
-        if let Some(dirs) = ProjectDirs::from("com", "Big Refactor", "devcon") {
+        if let Some(dirs) = ProjectDirs::from("com", "Big Refactor", "devcont") {
             let dir = dirs.config_dir();
             let file = dir.join("config.toml");
 
