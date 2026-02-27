@@ -34,7 +34,7 @@ impl Devcontainer {
                 )
             })?;
             let settings = Settings::load();
-            let provider = build_provider(&directory, &settings, &config);
+            let provider = build_provider(&directory, &settings, &config)?;
 
             Ok(Self {
                 config: config.clone(),
@@ -181,15 +181,32 @@ impl Devcontainer {
     }
 }
 
-fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box<dyn Provider> {
+fn missing_field(field: &str) -> std::io::Error {
+    std::io::Error::new(
+        ErrorKind::InvalidData,
+        format!("devcontainer.json is missing required field: {field}"),
+    )
+}
+
+fn build_provider(
+    directory: &Path,
+    settings: &Settings,
+    config: &Config,
+) -> std::io::Result<Box<dyn Provider>> {
     match settings.provider {
         crate::settings::Provider::Docker => {
             if config.is_compose() {
-                let composefile = directory
-                    .join(".devcontainer")
-                    .join(config.docker_compose_file.as_ref().unwrap());
+                let compose_file = config
+                    .docker_compose_file
+                    .as_deref()
+                    .ok_or_else(|| missing_field("dockerComposeFile"))?;
+                let composefile = directory.join(".devcontainer").join(compose_file);
+                let service = config
+                    .service
+                    .as_deref()
+                    .ok_or_else(|| missing_field("service"))?;
 
-                Box::new(DockerCompose {
+                Ok(Box::new(DockerCompose {
                     build_args: config.build_args(),
                     directory: directory.to_string_lossy().to_string(),
                     command: "docker".to_string(),
@@ -197,18 +214,20 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
                     name: config.safe_name(),
                     forward_ports: config.forward_ports.clone(),
                     run_args: config.run_args.clone(),
-                    service: config.service.as_ref().unwrap().to_string(),
+                    service: service.to_string(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
-                })
+                }))
             } else {
-                let dockerfile = directory.join(config.dockerfile().unwrap());
+                let dockerfile = config
+                    .dockerfile()
+                    .ok_or_else(|| missing_field("build.dockerfile"))?;
 
-                Box::new(Docker {
+                Ok(Box::new(Docker {
                     build_args: config.build_args(),
                     directory: directory.to_string_lossy().to_string(),
                     command: "docker".to_string(),
-                    file: dockerfile.to_string_lossy().to_string(),
+                    file: directory.join(dockerfile).to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     override_command: config.override_command,
@@ -216,16 +235,22 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
                     mounts: config.mounts.clone(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
-                })
+                }))
             }
         }
         crate::settings::Provider::Podman => {
             if config.is_compose() {
-                let composefile = directory
-                    .join(".devcontainer")
-                    .join(config.docker_compose_file.as_ref().unwrap());
+                let compose_file = config
+                    .docker_compose_file
+                    .as_deref()
+                    .ok_or_else(|| missing_field("dockerComposeFile"))?;
+                let composefile = directory.join(".devcontainer").join(compose_file);
+                let service = config
+                    .service
+                    .as_deref()
+                    .ok_or_else(|| missing_field("service"))?;
 
-                Box::new(PodmanCompose {
+                Ok(Box::new(PodmanCompose {
                     build_args: config.build_args(),
                     directory: directory.to_string_lossy().to_string(),
                     command: "podman-compose".to_string(),
@@ -234,16 +259,17 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
                     name: config.safe_name(),
                     podman_command: "podman".to_string(),
                     run_args: config.run_args.clone(),
-                    service: config.service.as_ref().unwrap().to_string(),
+                    service: service.to_string(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
-                })
+                }))
             } else {
-                let dockerfile = directory
-                    .join(".devcontainer")
-                    .join(config.dockerfile().unwrap());
+                let dockerfile = config
+                    .dockerfile()
+                    .ok_or_else(|| missing_field("build.dockerfile"))?;
+                let dockerfile = directory.join(".devcontainer").join(dockerfile);
 
-                Box::new(Podman {
+                Ok(Box::new(Podman {
                     build_args: config.build_args(),
                     directory: directory.to_string_lossy().to_string(),
                     command: "podman".to_string(),
@@ -253,7 +279,7 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
                     run_args: config.run_args.clone(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
-                })
+                }))
             }
         }
     }
