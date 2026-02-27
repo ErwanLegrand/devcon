@@ -24,6 +24,18 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+## [ ] Track: Docker Provider Integration Tests
+*Comprehensive integration tests for `Docker` and `DockerCompose` providers — all `Provider` trait methods. Blocked on: DooD Dev Container track.*
+*Link: [./tracks/integration_tests_docker_20260228/](./tracks/integration_tests_docker_20260228/)*
+
+---
+
+## [ ] Track: Podman Provider Integration Tests
+*Comprehensive integration tests for `Podman` and `PodmanCompose` providers — all `Provider` trait methods. Blocked on: DooD Dev Container track + Docker integration tests track.*
+*Link: [./tracks/integration_tests_podman_20260228/](./tracks/integration_tests_podman_20260228/)*
+
+---
+
 ## Future Tracks (not yet planned)
 
 - Dev Containers spec compliance audit and gap fixes
