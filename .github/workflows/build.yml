@@ -17,30 +17,33 @@ jobs:
         include:
           - os: ubuntu-latest
             name: linux
-            bin: devcon
+            bin: devcont
           - os: macos-latest
             name: mac
-            bin: devcon
+            bin: devcont
           - os: windows-latest
             name: windows
-            bin: devcon.exe
+            bin: devcont.exe
 
-    runs-on: ${{matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v4
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: stable
-        override: true
-        components: clippy
-    - uses: actions/checkout@v2
-    - name: build
+        toolchain: '1.85'
+    - name: Build
       run: cargo build --release --locked
-    - name: artifacts
-      uses: actions/upload-artifact@v2
+    - name: Install cargo-deny
+      uses: taiki-e/install-action@cargo-deny
+      if: matrix.os == 'ubuntu-latest'
+    - name: Check licenses and bans
+      run: cargo deny check licenses bans
+      if: matrix.os == 'ubuntu-latest'
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
       with:
-        name: devcon-${{matrix.name}}
-        path: target/release/${{matrix.bin}}
+        name: devcont-${{ matrix.name }}
+        path: target/release/${{ matrix.bin }}
         if-no-files-found: error
-
-
