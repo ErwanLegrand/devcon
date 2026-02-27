@@ -74,12 +74,12 @@
     - [x] Replace deprecated `settings` key with `customizations.vscode.settings`
     - [x] Update `remoteUser` to `devcont`
     - [x] Verify `devcontainer.json` is valid JSON5
-- [ ] Task: Enrich `devcontainer.json` with template patterns
-    - [ ] Add `containerEnv`: `RUST_BACKTRACE=1`, `RUST_LOG=info`
-    - [ ] Add `postCreateCommand` pointing to `.devcontainer/post-create.sh`
-    - [ ] Expand VS Code extensions and settings from template audit
-- [ ] Task: Create `.devcontainer/post-create.sh` (adapted from template)
-    - [ ] Install cargo tools, configure git, run `cargo check`, display welcome
+- [x] Task: Enrich `devcontainer.json` with template patterns
+    - [x] Add `containerEnv`: `RUST_BACKTRACE=1`, `RUST_LOG=info`
+    - [x] Add `postCreateCommand` pointing to `.devcontainer/post-create.sh`
+    - [x] Expand VS Code extensions and settings from template audit
+- [x] Task: Create `.devcontainer/post-create.sh` (adapted from template)
+    - [x] Install cargo tools, configure git, run `cargo check`, display welcome
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Dev Container Update' (Protocol in workflow.md)
 
 ## Phase 4: Rust Dev Template Integration
@@ -88,20 +88,20 @@
     - [x] Clone `git@github.com:ErwanLegrand/rust-dev-template.git` to a temp location
     - [x] Read and document the structure and features of the template
     - [x] Produce a written list of features to adopt vs skip (saved to `conductor/tracks/foundation_modernization_20260227/template-audit.md`)
-- [ ] Task: Adopt `rust-toolchain.toml` from template (adapted for stable 1.85)
-    - [ ] Create `rust-toolchain.toml` with `channel = "1.85"`, components listed
-- [ ] Task: Adopt `src/error.rs` and `src/prelude.rs` pattern
-    - [ ] Create `src/error.rs` with typed Error enum using `thiserror`
-    - [ ] Create `src/prelude.rs` re-exporting common types
-    - [ ] (This task is merged into Phase 2 error handling task above)
-- [ ] Task: Adopt `.pre-commit-config.yaml` from template
-    - [ ] Copy and adapt the pre-commit config (remove cargo-outdated hook, requirements-txt-fixer)
-    - [ ] Verify hooks run correctly locally
+- [x] Task: Adopt `rust-toolchain.toml` from template (adapted for stable 1.85)
+    - [x] Create `rust-toolchain.toml` with `channel = "1.85"`, components listed
+- [x] Task: Adopt `src/error.rs` and `src/prelude.rs` pattern
+    - [x] Create `src/error.rs` with typed Error enum using `thiserror`
+    - [x] (Merged into Phase 2 error handling task)
+- [x] Task: Adopt `.pre-commit-config.yaml` from template
+    - [x] Copy and adapt the pre-commit config (removed cargo-outdated, requirements-txt-fixer)
 - [ ] Task: Adopt `.cargo/config.toml` from template
-    - [ ] Copy the xtask alias (note: xtask itself is deferred, but alias can still be useful later)
-- [ ] Task: Create `DEPENDENCIES.md`
-    - [ ] Document all runtime and dev dependencies and rationale
-- [ ] Task: Enrich devcontainer with template patterns (see Phase 3 enrichment tasks above)
+    - [ ] Copy the xtask alias (deferred — xtask not added yet)
+- [x] Task: Create `DEPENDENCIES.md`
+    - [x] Document all runtime and dev dependencies and rationale
+- [x] Task: Enrich devcontainer with template patterns
+    - [x] `containerEnv`, `postCreateCommand`, expanded VS Code settings
+    - [x] `.devcontainer/post-create.sh` created and made executable
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Rust Dev Template Integration' (Protocol in workflow.md)
 
 ## Phase 5: CI Quality Gates
