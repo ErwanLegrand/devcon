@@ -39,7 +39,7 @@ jobs:
       uses: taiki-e/install-action@cargo-deny
       if: matrix.os == 'ubuntu-latest'
     - name: Check licenses and bans
-      run: cargo deny check licenses bans
+      run: cargo deny check licenses bans advisories
       if: matrix.os == 'ubuntu-latest'
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

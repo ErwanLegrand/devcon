@@ -11,6 +11,7 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
+/// A loaded and configured dev container instance.
 pub struct Devcontainer {
     config: Config,
     provider: Box<dyn Provider>,
@@ -18,7 +19,11 @@ pub struct Devcontainer {
 }
 
 impl Devcontainer {
-    pub fn load(directory: PathBuf) -> Result<Self, std::io::Error> {
+    /// Load a dev container from `directory`, resolving the config file and
+    /// selecting the appropriate container provider based on user settings.
+    ///
+    /// Looks for `.devcontainer/devcontainer.json` first, then `.devcontainer.json`.
+    pub fn load(directory: &Path) -> Result<Self, std::io::Error> {
         let file = directory.join(".devcontainer").join("devcontainer.json");
         let file = if file.is_file() {
             file
@@ -34,7 +39,7 @@ impl Devcontainer {
                 )
             })?;
             let settings = Settings::load();
-            let provider = build_provider(&directory, &settings, &config)?;
+            let provider = build_provider(directory, &settings, &config)?;
 
             Ok(Self {
                 config: config.clone(),
@@ -49,6 +54,9 @@ impl Devcontainer {
         }
     }
 
+    /// Build, start, and attach to the dev container, running lifecycle hooks.
+    ///
+    /// If `use_cache` is `false`, the image is built with `--no-cache`.
     pub fn run(&self, use_cache: bool) -> std::io::Result<()> {
         let provider = &self.provider;
 
@@ -68,6 +76,7 @@ impl Devcontainer {
         Ok(())
     }
 
+    /// Stop and remove the existing container, then run it fresh.
     pub fn rebuild(&self, use_cache: bool) -> std::io::Result<()> {
         let provider = &self.provider;
         if provider.exists()? {
@@ -120,7 +129,9 @@ impl Devcontainer {
                 .unwrap_or("<non-utf8>");
             let destination = if source.is_dir() { basedir } else { dest };
 
-            provider.exec(format!("mkdir -p {}", basedir))?;
+            // Shell-quote the path to handle spaces and special characters safely.
+            let basedir_quoted = format!("'{}'", basedir.replace('\'', r"'\''"));
+            provider.exec(format!("mkdir -p -- {basedir_quoted}"))?;
             provider.cp(
                 source.to_string_lossy().to_string(),
                 destination.to_string(),
@@ -128,7 +139,7 @@ impl Devcontainer {
         } else {
             Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("File not found {:?}", source),
+                format!("File not found {source:?}"),
             ))
         }
     }
@@ -141,7 +152,7 @@ impl Devcontainer {
         };
 
         for file in &self.settings.dotfiles {
-            let tilded = format!("~/{}", file);
+            let tilded = format!("~/{file}");
             let expanded = shellexpand::tilde(&tilded).to_string();
             let source = PathBuf::from(expanded);
             let dest = homedir.join(file.clone());
@@ -156,17 +167,27 @@ impl Devcontainer {
     fn copy_gitconfig(&self) -> std::io::Result<bool> {
         let path = shellexpand::tilde("~/.gitconfig").to_string();
         let file = PathBuf::from(path);
-        let dest = format!("/home/{}/.gitconfig", self.config.remote_user);
-
-        self.copy(&file, &dest)
+        if !file.exists() {
+            return Ok(false);
+        }
+        let homedir = if self.config.remote_user == "root" {
+            PathBuf::from("/root")
+        } else {
+            PathBuf::from("/home").join(&self.config.remote_user)
+        };
+        let dest = homedir.join(".gitconfig");
+        let dest_str = dest.to_string_lossy();
+        self.copy(&file, &dest_str)
     }
 
+    /// Build the list of extra arguments passed to the container create command
+    /// (environment variables, working directory, and `runArgs` from config).
     pub fn create_args(&self) -> Vec<String> {
         let mut args = vec![];
 
         for (key, value) in &self.config.remote_env {
             args.push("-e".to_string());
-            args.push(format!("{}={}", key, value));
+            args.push(format!("{key}={value}"));
         }
 
         let workspace_folder = self.config.workspace_folder.clone();
@@ -200,7 +221,7 @@ fn build_provider(
                     .docker_compose_file
                     .as_deref()
                     .ok_or_else(|| missing_field("dockerComposeFile"))?;
-                let composefile = directory.join(".devcontainer").join(compose_file);
+                let compose_path = directory.join(".devcontainer").join(compose_file);
                 let service = config
                     .service
                     .as_deref()
@@ -210,7 +231,7 @@ fn build_provider(
                     build_args: config.build_args(),
                     directory: directory.to_string_lossy().to_string(),
                     command: "docker".to_string(),
-                    file: composefile.to_string_lossy().to_string(),
+                    file: compose_path.to_string_lossy().to_string(),
                     name: config.safe_name(),
                     forward_ports: config.forward_ports.clone(),
                     run_args: config.run_args.clone(),
@@ -244,7 +265,7 @@ fn build_provider(
                     .docker_compose_file
                     .as_deref()
                     .ok_or_else(|| missing_field("dockerComposeFile"))?;
-                let composefile = directory.join(".devcontainer").join(compose_file);
+                let compose_path = directory.join(".devcontainer").join(compose_file);
                 let service = config
                     .service
                     .as_deref()
@@ -254,7 +275,7 @@ fn build_provider(
                     build_args: config.build_args(),
                     directory: directory.to_string_lossy().to_string(),
                     command: "podman-compose".to_string(),
-                    file: composefile.to_string_lossy().to_string(),
+                    file: compose_path.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     podman_command: "podman".to_string(),

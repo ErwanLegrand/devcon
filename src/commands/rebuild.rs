@@ -3,20 +3,20 @@ use std::path::PathBuf;
 
 use crate::devcontainers::Devcontainer;
 
-pub fn run(dir: &Option<String>, use_cache: bool) -> std::io::Result<()> {
+pub fn run(dir: Option<&str>, use_cache: bool) -> std::io::Result<()> {
     let directory = get_project_directory(dir)?;
-    let devcontainer = Devcontainer::load(directory)?;
+    let devcontainer = Devcontainer::load(&directory)?;
     devcontainer.rebuild(use_cache)?;
 
     Ok(())
 }
 
-fn get_project_directory(dir: &Option<String>) -> std::io::Result<PathBuf> {
+fn get_project_directory(dir: Option<&str>) -> std::io::Result<PathBuf> {
     if let Some(path) = dir {
         let expanded = shellexpand::env(path).map_err(|e| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
-                format!("Could not expand dir '{}': {}", path, e),
+                format!("Could not expand dir '{path}': {e}"),
             )
         })?;
 

@@ -6,6 +6,8 @@ use std::process::Command;
 use super::Provider;
 use super::print_command;
 
+const IMAGE_NAMESPACE: &str = "devcont";
+
 #[derive(Debug)]
 pub struct Podman {
     pub build_args: HashMap<String, String>,
@@ -21,7 +23,7 @@ pub struct Podman {
 
 impl Provider for Podman {
     fn build(&self, use_cache: bool) -> Result<bool> {
-        let tag = format!("{}/{}", "devcont", &self.name);
+        let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
 
         let mut command = Command::new(&self.command);
         command
@@ -36,7 +38,7 @@ impl Provider for Podman {
         }
 
         for (key, value) in &self.build_args {
-            command.arg("--build-arg").arg(format!("{}={}", key, value));
+            command.arg("--build-arg").arg(format!("{key}={value}"));
         }
 
         command.arg(&self.directory);
@@ -47,7 +49,7 @@ impl Provider for Podman {
     }
 
     fn create(&self, args: Vec<String>) -> Result<bool> {
-        let tag = format!("{}/{}", "devcont", &self.name);
+        let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
 
         let mut command = Command::new(&self.command);
         command.arg("create");
@@ -63,13 +65,13 @@ impl Provider for Podman {
         // Forwards the ssh-agent to the container
         if let Ok(ssh_auth_sock) = env::var("SSH_AUTH_SOCK") {
             command.arg("--volume");
-            command.arg(format!("{}:/ssh-agent", ssh_auth_sock));
+            command.arg(format!("{ssh_auth_sock}:/ssh-agent"));
             command.arg("--env");
             command.arg("SSH_AUTH_SOCK=/ssh-agent");
         }
 
         for port in &self.forward_ports {
-            command.arg("--publish").arg(format!("{}:{}", port, port));
+            command.arg("--publish").arg(format!("{port}:{port}"));
         }
 
         for arg in &args {
@@ -100,8 +102,6 @@ impl Provider for Podman {
         command.arg("start").arg(&self.name);
 
         print_command(&command);
-
-        command.status()?;
 
         Ok(command.status()?.success())
     }

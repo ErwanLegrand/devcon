@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+
 use clap::Parser;
 use clap::Subcommand;
 
@@ -32,13 +34,13 @@ fn main() -> anyhow::Result<()> {
 
     match &cli.command {
         Some(Commands::Start { dir }) => {
-            commands::start::run(dir)?;
+            commands::start::run(dir.as_deref())?;
         }
         Some(Commands::Rebuild { dir, no_cache }) => {
-            commands::rebuild::run(dir, !no_cache)?;
+            commands::rebuild::run(dir.as_deref(), !no_cache)?;
         }
         None => {
-            commands::start::run(&None)?;
+            commands::start::run(None)?;
         }
     }
 

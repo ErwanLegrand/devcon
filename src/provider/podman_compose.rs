@@ -94,7 +94,7 @@ impl Provider for PodmanCompose {
         }
 
         for (key, value) in &self.build_args {
-            command.arg("--build-arg").arg(format!("{}={}", key, value));
+            command.arg("--build-arg").arg(format!("{key}={value}"));
         }
 
         print_command(&command);

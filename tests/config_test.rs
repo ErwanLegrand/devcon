@@ -52,7 +52,6 @@ fn devcontainer_invalid_fixture_is_not_valid_json5() {
     let result: Result<serde_json::Value, _> = json5::from_str(&contents);
     assert!(
         result.is_err(),
-        "invalid fixture must fail JSON5 parsing, got: {:?}",
-        result
+        "invalid fixture must fail JSON5 parsing, got: {result:?}"
     );
 }

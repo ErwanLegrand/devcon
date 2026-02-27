@@ -3,10 +3,13 @@ use serde::Deserialize;
 
 use crate::error::{Error, Result};
 
+/// Container engine provider selection.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Provider {
+    /// Use Docker (default).
     Docker,
+    /// Use Podman.
     Podman,
 }
 
@@ -16,10 +19,13 @@ impl Default for Provider {
     }
 }
 
+/// User settings loaded from `~/.config/devcont/config.toml`.
 #[derive(Debug, Default, Deserialize)]
 pub struct Settings {
+    /// Dotfiles to copy into the container (relative paths from `~`).
     pub dotfiles: Vec<String>,
     #[serde(default)]
+    /// Container engine to use.
     pub provider: Provider,
 }
 
@@ -32,7 +38,7 @@ impl Settings {
         match Self::try_load() {
             Ok(settings) => settings,
             Err(e) => {
-                eprintln!("Warning: could not load settings, using defaults: {}", e);
+                eprintln!("Warning: could not load settings, using defaults: {e}");
                 Self::default()
             }
         }

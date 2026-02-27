@@ -17,6 +17,7 @@ impl Default for ShutdownAction {
     }
 }
 
+/// Parsed representation of a `devcontainer.json` configuration file.
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
@@ -47,6 +48,7 @@ pub struct Config {
     shutdown_action: ShutdownAction,
 }
 
+/// Build configuration block within `devcontainer.json`.
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Build {
@@ -60,6 +62,11 @@ pub struct Build {
 }
 
 impl Config {
+    /// Parse a `devcontainer.json` (or JSON5) file from `file`.
+    ///
+    /// # Errors
+    /// Returns [`Error::Io`] if the file cannot be read, or [`Error::ConfigParse`]
+    /// if the content is not valid JSON5 or does not match the expected schema.
     pub fn parse(file: &Path) -> Result<Config> {
         let contents = std::fs::read_to_string(file).map_err(Error::Io)?;
         let config: Config =
@@ -67,14 +74,19 @@ impl Config {
         Ok(config)
     }
 
+    /// Return the Dockerfile path from the `build` block, if present.
     pub fn dockerfile(&self) -> Option<String> {
         self.build.clone().and_then(|b| b.dockerfile)
     }
 
+    /// Return the build arguments from the `build` block, or an empty map.
     pub fn build_args(&self) -> HashMap<String, String> {
         self.build.clone().map(|b| b.args).unwrap_or_default()
     }
 
+    /// Return a container-safe name with the `devcont-` prefix.
+    ///
+    /// Lowercases the project name and replaces spaces with dashes.
     pub fn safe_name(&self) -> String {
         let name = self
             .name
@@ -83,13 +95,15 @@ impl Config {
             .trim()
             .to_string();
 
-        format!("devcont-{}", name)
+        format!("devcont-{name}")
     }
 
+    /// Return `true` if the container should be stopped after the session ends.
     pub fn should_shutdown(&self) -> bool {
         !matches!(self.shutdown_action, ShutdownAction::None)
     }
 
+    /// Return `true` if this config uses Docker Compose (i.e., `dockerComposeFile` is set).
     pub fn is_compose(&self) -> bool {
         self.docker_compose_file.is_some()
     }
@@ -118,8 +132,7 @@ mod tests {
         let name = config.safe_name();
         assert!(
             name.starts_with("devcont-"),
-            "safe_name() should start with 'devcont-', got '{}'",
-            name
+            "safe_name() should start with 'devcont-', got '{name}'"
         );
         assert_eq!(name, "devcont-test-project");
     }
@@ -146,7 +159,7 @@ mod tests {
             "Config::parse() on invalid JSON5 must return Err"
         );
         // Ensure it's a ConfigParse variant, not an Io error
-        matches!(result.unwrap_err(), Error::ConfigParse(_));
+        assert!(matches!(result.unwrap_err(), Error::ConfigParse(_)));
     }
 
     #[test]

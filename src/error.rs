@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+/// Application-level errors for `devcont`.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("I/O error: {0}")]
@@ -16,4 +17,5 @@ pub enum Error {
     Provider(String),
 }
 
+/// Convenience alias for `std::result::Result<T, Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
