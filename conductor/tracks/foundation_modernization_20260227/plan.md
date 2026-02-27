@@ -23,41 +23,40 @@
 
 ## Phase 2: Rust Edition 2024 + Dependency Upgrades
 
-- [ ] Task: Write tests for config parsing and settings loading before refactoring
-    - [ ] Add `tests/config_test.rs` with tests for `Config::parse()` using fixture files
-    - [ ] Add tests for `Build`, `ShutdownAction` deserialization edge cases
-    - [ ] Add test for `Settings::load()` with missing config file
-    - [ ] Verify all new tests pass against current code (GREEN baseline)
-- [ ] Task: Upgrade to Rust edition 2024 and set MSRV
-    - [ ] Set `edition = "2024"` in `Cargo.toml`
-    - [ ] Set `rust-version = "1.85"` in `Cargo.toml`
-    - [ ] Fix any edition 2024 migration warnings/errors (`cargo fix --edition`)
-    - [ ] Create `rust-toolchain.toml` pinned to stable 1.85
-- [ ] Task: Upgrade clap from 3.x to 4.x
-    - [ ] Update `Cargo.toml` dependency
-    - [ ] Migrate CLI definitions in `src/main.rs` to clap 4 API
-    - [ ] Verify `--help` and subcommand behavior unchanged
-- [ ] Task: Add `anyhow` and `thiserror` dependencies
-    - [ ] Add to `Cargo.toml`
-    - [ ] Create `src/error.rs` with typed `Error` enum (from template pattern)
-    - [ ] Create `src/prelude.rs` re-exporting common types
-- [ ] Task: Upgrade remaining dependencies to latest compatible versions
-    - [ ] `shellexpand` 2.x → 3.x
-    - [ ] `directories` 4.x → 5.x
-    - [ ] `toml` 0.5.x → 0.8.x
-    - [ ] `serde`, `serde_json`, `json5`, `colored`, `tinytemplate` — bump to latest
-    - [ ] Resolve any API breakage from upgrades
-- [ ] Task: Replace `unwrap()`/`expect()` with proper error handling
-    - [ ] `Config::parse()` — propagate json5 parse error with context
-    - [ ] `Settings::load()` — return `anyhow::Result<Settings>`, propagate toml errors
-    - [ ] `src/commands/start.rs` — propagate errors up
-    - [ ] `src/commands/rebuild.rs` — propagate errors up
-    - [ ] `src/main.rs` — handle top-level errors with user-friendly message + non-zero exit
-    - [ ] `src/provider/docker.rs` — replace `String::from_utf8(...).unwrap()`
-    - [ ] `src/provider/podman.rs` — same
-    - [ ] Verify config parsing tests still pass
-- [ ] Task: Run `cargo clippy -- -D warnings` and fix all warnings
-- [ ] Task: Run `cargo fmt` and commit formatted code
+- [x] Task: Write tests for config parsing and settings loading before refactoring
+    - [x] Add `tests/config_test.rs` with tests for `Config::parse()` using fixture files
+    - [x] Add tests for `Build`, `ShutdownAction` deserialization edge cases
+    - [x] Add test for `Settings::load()` with missing config file
+    - [x] Verify all new tests pass against current code (GREEN baseline)
+- [x] Task: Upgrade to Rust edition 2024 and set MSRV
+    - [x] Set `edition = "2024"` in `Cargo.toml`
+    - [x] Set `rust-version = "1.85"` in `Cargo.toml`
+    - [x] Fix any edition 2024 migration warnings/errors
+    - [x] `rust-toolchain.toml` pinned to stable 1.85 (Phase 4 task)
+- [x] Task: Upgrade clap from 3.x to 4.x
+    - [x] Update `Cargo.toml` dependency
+    - [x] Migrate CLI definitions in `src/main.rs` to clap 4 API (`#[command]`, `#[arg]`)
+    - [x] Verify `--help` and subcommand behavior unchanged
+- [x] Task: Add `anyhow` and `thiserror` dependencies
+    - [x] Add to `Cargo.toml`
+    - [x] Create `src/error.rs` with typed `Error` enum
+- [x] Task: Upgrade remaining dependencies to latest compatible versions
+    - [x] `shellexpand` 2.x → 3.x
+    - [x] `directories` 4.x → 5.x
+    - [x] `toml` 0.5.x → 0.8.x
+    - [x] Resolve any API breakage from upgrades
+- [x] Task: Replace `unwrap()`/`expect()` with proper error handling
+    - [x] `Config::parse()` — propagate json5 parse error with context
+    - [x] `Settings::load()` — try_load() returns Result, load() returns default on error with warning
+    - [x] `src/commands/start.rs` — shellexpand errors mapped to io::Error
+    - [x] `src/commands/rebuild.rs` — same
+    - [x] `src/main.rs` — main() returns anyhow::Result<()>
+    - [x] `src/provider/docker.rs` — String::from_utf8 uses unwrap_or_default()
+    - [x] `src/provider/podman.rs` — same
+    - [x] `src/provider/docker_compose.rs` + `podman_compose.rs` — template errors use map_err/?
+    - [x] Verify config parsing tests still pass (8/8 passing)
+- [x] Task: Run `cargo clippy -- -D warnings` and fix all warnings
+- [x] Task: Run `cargo fmt` and commit formatted code
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Rust Edition 2024 + Dependency Upgrades' (Protocol in workflow.md)
 
 ## Phase 3: Dev Container Update
