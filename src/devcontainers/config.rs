@@ -77,7 +77,7 @@ impl Config {
             .trim()
             .to_string();
 
-        format!("devcon-{}", name)
+        format!("devcont-{}", name)
     }
 
     pub fn should_shutdown(&self) -> bool {
@@ -95,4 +95,26 @@ fn default_remote_user() -> String {
 
 fn default_workspace_folder() -> String {
     "/workspace".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn safe_name_uses_devcont_prefix() {
+        let fixture = Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/devcontainer.json"
+        ));
+        let config = Config::parse(fixture).expect("fixture should parse");
+        let name = config.safe_name();
+        assert!(
+            name.starts_with("devcont-"),
+            "safe_name() should start with 'devcont-', got '{}'",
+            name
+        );
+        assert_eq!(name, "devcont-test-project");
+    }
 }
