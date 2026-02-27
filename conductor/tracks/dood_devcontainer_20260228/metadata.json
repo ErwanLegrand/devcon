@@ -1,0 +1,8 @@
+{
+  "track_id": "dood_devcontainer_20260228",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-28T00:00:00Z",
+  "updated_at": "2026-02-28T00:00:00Z",
+  "description": "Add Docker-outside-of-Docker (DooD) to the dev container and a minimal integration test suite in tests/integration.rs"
+}
