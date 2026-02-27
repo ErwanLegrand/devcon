@@ -8,7 +8,6 @@ RUN apt-get update && \
         curl \
         build-essential \
         pkg-config \
-        libssl-dev \
         ca-certificates \
         sudo && \
     rm -rf /var/lib/apt/lists/*
