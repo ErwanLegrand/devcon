@@ -1,16 +1,23 @@
-FROM fedora:latest
+FROM rust:1-slim-bookworm
 
-ARG USER=devcon
-ENV SHELL=/usr/bin/zsh
+ARG USER=devcont
 
-RUN dnf update -y
-RUN dnf install -y procps zsh neovim clang fd-find ripgrep fzf exa bat git-delta tmux python3-neovim starship gh lldb
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        build-essential \
+        pkg-config \
+        libssl-dev \
+        ca-certificates \
+        sudo && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN useradd -ms /usr/bin/zsh $USER && \
-    usermod -aG wheel $USER && \
-    echo "${USER}        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers
+RUN cargo install cargo-llvm-cov cargo-deny
 
-RUN dnf install -y rust cargo clippy rustfmt rust-src
+RUN adduser --disabled-password --gecos "" $USER && \
+    echo "${USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+WORKDIR /workspace
 
 USER $USER
-
