@@ -4,7 +4,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Foundation Modernization
+## [x] Track: Foundation Modernization
 *Rename to `devcont`, Rust 2024 + MSRV 1.85, dependency upgrades, official rust dev container, rust-dev-template integration, CI quality gates.*
 *Link: [./tracks/foundation_modernization_20260227/](./tracks/foundation_modernization_20260227/)*
 
