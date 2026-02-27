@@ -19,7 +19,7 @@
     - [x] Replace all `devcon` command references with `devcont`
     - [x] Update installation section
 - [x] Task: Run full test suite and verify branding tests pass
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Re-branding' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Re-branding' (Protocol in workflow.md)
 
 ## Phase 2: Rust Edition 2024 + Dependency Upgrades
 
@@ -57,7 +57,7 @@
     - [x] Verify config parsing tests still pass (8/8 passing)
 - [x] Task: Run `cargo clippy -- -D warnings` and fix all warnings
 - [x] Task: Run `cargo fmt` and commit formatted code
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Rust Edition 2024 + Dependency Upgrades' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Rust Edition 2024 + Dependency Upgrades' (Protocol in workflow.md)
 
 ## Phase 3: Dev Container Update
 
@@ -79,7 +79,7 @@
     - [x] Expand VS Code extensions and settings from template audit
 - [x] Task: Create `.devcontainer/post-create.sh` (adapted from template)
     - [x] Install cargo tools, configure git, run `cargo check`, display welcome
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Dev Container Update' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Dev Container Update' (Protocol in workflow.md)
 
 ## Phase 4: Rust Dev Template Integration
 
@@ -101,7 +101,7 @@
 - [x] Task: Enrich devcontainer with template patterns
     - [x] `containerEnv`, `postCreateCommand`, expanded VS Code settings
     - [x] `.devcontainer/post-create.sh` created and made executable
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Rust Dev Template Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Rust Dev Template Integration' (Protocol in workflow.md)
 
 ## Phase 5: CI Quality Gates
 
@@ -121,4 +121,4 @@
     - [x] `cargo clippy --all-targets -- -D warnings` ✓
     - [x] `cargo fmt --check` ✓
     - [x] `cargo deny check licenses bans` ✓
-- [ ] Task: Conductor - User Manual Verification 'Phase 5: CI Quality Gates' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 5: CI Quality Gates' (Protocol in workflow.md)
