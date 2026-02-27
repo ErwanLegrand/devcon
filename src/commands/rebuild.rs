@@ -13,9 +13,14 @@ pub fn run(dir: &Option<String>, use_cache: bool) -> std::io::Result<()> {
 
 fn get_project_directory(dir: &Option<String>) -> std::io::Result<PathBuf> {
     if let Some(path) = dir {
-        let mut expanded = shellexpand::env(path).expect("Could not expand dir");
+        let expanded = shellexpand::env(path).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Could not expand dir '{}': {}", path, e),
+            )
+        })?;
 
-        Path::new(expanded.to_mut()).canonicalize()
+        Path::new(expanded.as_ref()).canonicalize()
     } else {
         std::env::current_dir()
     }

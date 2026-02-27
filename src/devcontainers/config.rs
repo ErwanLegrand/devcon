@@ -2,6 +2,8 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::error::{Error, Result};
+
 #[derive(Debug, Deserialize, Clone)]
 enum ShutdownAction {
     None,
@@ -19,6 +21,8 @@ impl Default for ShutdownAction {
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     name: String,
+    // Retained for devcontainer spec completeness; may be used in future features.
+    #[allow(dead_code)]
     pub file: Option<String>,
     pub build: Option<Build>,
     #[serde(default)]
@@ -47,6 +51,8 @@ pub struct Config {
 #[serde(rename_all = "camelCase")]
 pub struct Build {
     pub dockerfile: Option<String>,
+    // Retained for devcontainer spec completeness; may be used in future features.
+    #[allow(dead_code)]
     pub context: Option<String>,
 
     #[serde(default)]
@@ -54,10 +60,10 @@ pub struct Build {
 }
 
 impl Config {
-    pub fn parse(file: &Path) -> Result<Config, std::io::Error> {
-        let contents = std::fs::read_to_string(file)?;
-        let config: Config = json5::from_str(&contents).unwrap();
-
+    pub fn parse(file: &Path) -> Result<Config> {
+        let contents = std::fs::read_to_string(file).map_err(Error::Io)?;
+        let config: Config =
+            json5::from_str(&contents).map_err(|e| Error::ConfigParse(e.to_string()))?;
         Ok(config)
     }
 
@@ -116,5 +122,42 @@ mod tests {
             name
         );
         assert_eq!(name, "devcont-test-project");
+    }
+
+    #[test]
+    fn parse_missing_file_returns_err_not_panic() {
+        let missing = Path::new("/tmp/nonexistent_devcontainer_fixture.json");
+        let result = Config::parse(missing);
+        assert!(
+            result.is_err(),
+            "Config::parse() on a missing file must return Err"
+        );
+    }
+
+    #[test]
+    fn parse_invalid_json5_returns_err_not_panic() {
+        let invalid = Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/devcontainer_invalid.json"
+        ));
+        let result = Config::parse(invalid);
+        assert!(
+            result.is_err(),
+            "Config::parse() on invalid JSON5 must return Err"
+        );
+        // Ensure it's a ConfigParse variant, not an Io error
+        matches!(result.unwrap_err(), Error::ConfigParse(_));
+    }
+
+    #[test]
+    fn safe_name_replaces_spaces_with_dashes() {
+        let minimal = Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/devcontainer_minimal.json"
+        ));
+        let config = Config::parse(minimal).expect("minimal fixture should parse");
+        let name = config.safe_name();
+        assert_eq!(name, "devcont-minimal");
+        assert!(!name.contains(' '), "safe_name must not contain spaces");
     }
 }

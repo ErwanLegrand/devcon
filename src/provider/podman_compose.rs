@@ -5,10 +5,11 @@ use std::io::Result;
 use std::process::Command;
 use tinytemplate::TinyTemplate;
 
-use super::print_command;
 use super::Provider;
+use super::print_command;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct PodmanCompose {
     pub build_args: HashMap<String, String>,
     pub command: String,
@@ -64,13 +65,13 @@ impl PodmanCompose {
 
         let mut tt = TinyTemplate::new();
         tt.add_template("docker-compose.yml", TEMPLATE)
-            .expect("could not create template");
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
         let rendered = tt
             .render("docker-compose.yml", &context)
-            .expect("could not render template");
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
         std::fs::write(&file, rendered)?;
 
-        Ok(file.to_str().expect("could not make tmp file").to_string())
+        Ok(file.to_string_lossy().to_string())
     }
 }
 
@@ -216,7 +217,10 @@ impl Provider for PodmanCompose {
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output).unwrap().trim().to_string();
+        let value = String::from_utf8(output)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
 
         Ok(!value.is_empty())
     }
@@ -232,7 +236,10 @@ impl Provider for PodmanCompose {
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output).unwrap().trim().to_string();
+        let value = String::from_utf8(output)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
 
         Ok(!value.is_empty())
     }

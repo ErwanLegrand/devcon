@@ -3,8 +3,8 @@ use std::env;
 use std::io::Result;
 use std::process::Command;
 
-use super::print_command;
 use super::Provider;
+use super::print_command;
 
 #[derive(Debug)]
 pub struct Docker {
@@ -82,8 +82,12 @@ impl Provider for Docker {
         if let Some(mounts) = &self.mounts {
             for mount in mounts {
                 command.arg("--mount");
-                
-                let m = mount.iter().map(|(k,v)| format!("{}={}", k, v)).collect::<Vec<String>>().join(",");
+
+                let m = mount
+                    .iter()
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect::<Vec<String>>()
+                    .join(",");
                 command.arg(m);
             }
         }
@@ -95,11 +99,14 @@ impl Provider for Docker {
         command.arg("-w");
         command.arg(&self.workspace_folder);
         command.arg(tag);
-        
+
         if self.override_command {
-            command.arg("/bin/sh").arg("-c").arg("while sleep 1000; do :; done");    
+            command
+                .arg("/bin/sh")
+                .arg("-c")
+                .arg("while sleep 1000; do :; done");
         }
-        
+
         print_command(&command);
 
         Ok(command.status()?.success())
@@ -161,7 +168,10 @@ impl Provider for Docker {
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output).unwrap().trim().to_string();
+        let value = String::from_utf8(output)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
 
         Ok(!value.is_empty())
     }
@@ -175,7 +185,10 @@ impl Provider for Docker {
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output).unwrap().trim().to_string();
+        let value = String::from_utf8(output)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
 
         Ok(!value.is_empty())
     }

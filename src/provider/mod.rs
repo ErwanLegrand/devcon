@@ -24,9 +24,13 @@ pub(crate) fn print_command(command: &std::process::Command) {
     let exec = command.get_program();
     let args: Vec<&str> = command
         .get_args()
-        .map(|arg| arg.to_str().unwrap())
+        .map(|arg| arg.to_str().unwrap_or("<non-utf8>"))
         .collect();
 
-    let output = format!("{} {}", exec.to_str().unwrap(), args.join(" "));
+    let output = format!(
+        "{} {}",
+        exec.to_str().unwrap_or("<non-utf8>"),
+        args.join(" ")
+    );
     println!("{}", output.bold().blue());
 }

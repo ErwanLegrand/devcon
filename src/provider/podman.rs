@@ -3,8 +3,8 @@ use std::env;
 use std::io::Result;
 use std::process::Command;
 
-use super::print_command;
 use super::Provider;
+use super::print_command;
 
 #[derive(Debug)]
 pub struct Podman {
@@ -151,7 +151,10 @@ impl Provider for Podman {
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output).unwrap().trim().to_string();
+        let value = String::from_utf8(output)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
 
         Ok(!value.is_empty())
     }
@@ -165,7 +168,10 @@ impl Provider for Podman {
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output).unwrap().trim().to_string();
+        let value = String::from_utf8(output)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
 
         Ok(!value.is_empty())
     }

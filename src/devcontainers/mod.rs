@@ -1,13 +1,13 @@
 pub mod config;
 
-use std::io::ErrorKind;
+use crate::provider::Provider;
 use crate::provider::docker::Docker;
 use crate::provider::docker_compose::DockerCompose;
 use crate::provider::podman::Podman;
 use crate::provider::podman_compose::PodmanCompose;
-use crate::provider::Provider;
 use crate::settings::Settings;
 use config::Config;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -27,7 +27,12 @@ impl Devcontainer {
         };
 
         if file.exists() {
-            let config = Config::parse(&file).expect(format!("could not parse {}", file.as_path().display()).as_str());
+            let config = Config::parse(&file).map_err(|e| {
+                std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    format!("could not parse {}: {}", file.display(), e),
+                )
+            })?;
             let settings = Settings::load();
             let provider = build_provider(&directory, &settings, &config);
 
@@ -37,7 +42,10 @@ impl Devcontainer {
                 settings,
             })
         } else {
-            Err(std::io::Error::new(ErrorKind::NotFound, "Could not find .devcontainer/devcontainer.json or .devcontainer.json"))
+            Err(std::io::Error::new(
+                ErrorKind::NotFound,
+                "Could not find .devcontainer/devcontainer.json or .devcontainer.json",
+            ))
         }
     }
 
@@ -106,7 +114,10 @@ impl Devcontainer {
         if source.exists() {
             let provider = &self.provider;
             let destpath = PathBuf::from(dest);
-            let basedir = destpath.parent().and_then(|p| p.to_str()).unwrap();
+            let basedir = destpath
+                .parent()
+                .and_then(|p| p.to_str())
+                .unwrap_or("<non-utf8>");
             let destination = if source.is_dir() { basedir } else { dest };
 
             provider.exec(format!("mkdir -p {}", basedir))?;
@@ -134,8 +145,9 @@ impl Devcontainer {
             let expanded = shellexpand::tilde(&tilded).to_string();
             let source = PathBuf::from(expanded);
             let dest = homedir.join(file.clone());
+            let dest_str = dest.to_string_lossy();
 
-            self.copy(&source, dest.to_str().unwrap())?;
+            self.copy(&source, &dest_str)?;
         }
 
         Ok(())
@@ -179,9 +191,9 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
 
                 Box::new(DockerCompose {
                     build_args: config.build_args(),
-                    directory: directory.to_str().map(|d| d.to_string()).unwrap(),
+                    directory: directory.to_string_lossy().to_string(),
                     command: "docker".to_string(),
-                    file: composefile.to_str().unwrap().to_string(),
+                    file: composefile.to_string_lossy().to_string(),
                     name: config.safe_name(),
                     forward_ports: config.forward_ports.clone(),
                     run_args: config.run_args.clone(),
@@ -190,15 +202,13 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
                     workspace_folder: config.workspace_folder.clone(),
                 })
             } else {
-                let dockerfile = directory
-                    // .join(".devcontainer")
-                    .join(config.dockerfile().unwrap());
+                let dockerfile = directory.join(config.dockerfile().unwrap());
 
                 Box::new(Docker {
                     build_args: config.build_args(),
-                    directory: directory.to_str().map(|d| d.to_string()).unwrap(),
+                    directory: directory.to_string_lossy().to_string(),
                     command: "docker".to_string(),
-                    file: dockerfile.to_str().unwrap().to_string(),
+                    file: dockerfile.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     override_command: config.override_command,
@@ -217,9 +227,9 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
 
                 Box::new(PodmanCompose {
                     build_args: config.build_args(),
-                    directory: directory.to_str().map(|d| d.to_string()).unwrap(),
+                    directory: directory.to_string_lossy().to_string(),
                     command: "podman-compose".to_string(),
-                    file: composefile.to_str().unwrap().to_string(),
+                    file: composefile.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     podman_command: "podman".to_string(),
@@ -235,9 +245,9 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
 
                 Box::new(Podman {
                     build_args: config.build_args(),
-                    directory: directory.to_str().map(|d| d.to_string()).unwrap(),
+                    directory: directory.to_string_lossy().to_string(),
                     command: "podman".to_string(),
-                    file: dockerfile.to_str().unwrap().to_string(),
+                    file: dockerfile.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     run_args: config.run_args.clone(),

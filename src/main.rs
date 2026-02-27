@@ -3,14 +3,15 @@ use clap::Subcommand;
 
 pub(crate) mod commands;
 pub(crate) mod devcontainers;
+pub(crate) mod error;
 pub(crate) mod provider;
 pub(crate) mod settings;
 
 #[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
-#[clap(propagate_version = true)]
+#[command(author, version, about, long_about = None)]
+#[command(propagate_version = true)]
 struct Cli {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     command: Option<Commands>,
 }
 
@@ -18,7 +19,7 @@ struct Cli {
 enum Commands {
     Rebuild {
         dir: Option<String>,
-        #[clap(short, long)]
+        #[arg(short, long)]
         no_cache: bool,
     },
     Start {
@@ -26,18 +27,20 @@ enum Commands {
     },
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
         Some(Commands::Start { dir }) => {
-            commands::start::run(dir).unwrap();
+            commands::start::run(dir)?;
         }
         Some(Commands::Rebuild { dir, no_cache }) => {
-            commands::rebuild::run(dir, !no_cache).unwrap();
+            commands::rebuild::run(dir, !no_cache)?;
         }
         None => {
-            commands::start::run(&None).unwrap();
+            commands::start::run(&None)?;
         }
     }
+
+    Ok(())
 }

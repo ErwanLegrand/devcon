@@ -26,7 +26,10 @@ fn devcontainer_minimal_fixture_is_present() {
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/devcontainer_minimal.json"
     ));
-    assert!(path.exists(), "devcontainer_minimal.json fixture must exist");
+    assert!(
+        path.exists(),
+        "devcontainer_minimal.json fixture must exist"
+    );
     let contents = std::fs::read_to_string(path).expect("should be readable");
     assert!(
         contents.contains("minimal"),
@@ -41,7 +44,10 @@ fn devcontainer_invalid_fixture_is_not_valid_json5() {
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/devcontainer_invalid.json"
     ));
-    assert!(path.exists(), "devcontainer_invalid.json fixture must exist");
+    assert!(
+        path.exists(),
+        "devcontainer_invalid.json fixture must exist"
+    );
     let contents = std::fs::read_to_string(path).expect("should be readable");
     let result: Result<serde_json::Value, _> = json5::from_str(&contents);
     assert!(
