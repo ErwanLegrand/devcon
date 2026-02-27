@@ -20,7 +20,6 @@ allow = [
     "Unicode-3.0",
     "Unicode-DFS-2016",
     "CC0-1.0",
-    "Zlib",
     "MPL-2.0",  # colored, option-ext (transitive via dirs/shellexpand)
     "AGPL-3.0",  # devcont itself (AGPL-3.0-or-later)
 ]
