@@ -18,9 +18,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Docker-outside-of-Docker for Dev Container
+## [x] Track: Docker-outside-of-Docker for Dev Container
 *Add DooD support (socket mount + Docker CLI) to the dev container, and a minimal integration test suite (`tests/integration.rs`) with purpose-built fixtures.*
-*Link: [./tracks/dood_devcontainer_20260228/](./tracks/dood_devcontainer_20260228/)*
+*Link: [./archive/dood_devcontainer_20260228/](./archive/dood_devcontainer_20260228/)*
 
 ---
 
