@@ -75,11 +75,13 @@ impl Config {
     }
 
     /// Return the Dockerfile path from the `build` block, if present.
+    #[must_use]
     pub fn dockerfile(&self) -> Option<String> {
         self.build.clone().and_then(|b| b.dockerfile)
     }
 
     /// Return the build arguments from the `build` block, or an empty map.
+    #[must_use]
     pub fn build_args(&self) -> HashMap<String, String> {
         self.build.clone().map(|b| b.args).unwrap_or_default()
     }
@@ -87,6 +89,7 @@ impl Config {
     /// Return a container-safe name with the `devcont-` prefix.
     ///
     /// Lowercases the project name and replaces spaces with dashes.
+    #[must_use]
     pub fn safe_name(&self) -> String {
         let name = self
             .name
@@ -99,11 +102,13 @@ impl Config {
     }
 
     /// Return `true` if the container should be stopped after the session ends.
+    #[must_use]
     pub fn should_shutdown(&self) -> bool {
         !matches!(self.shutdown_action, ShutdownAction::None)
     }
 
     /// Return `true` if this config uses Docker Compose (i.e., `dockerComposeFile` is set).
+    #[must_use]
     pub fn is_compose(&self) -> bool {
         self.docker_compose_file.is_some()
     }

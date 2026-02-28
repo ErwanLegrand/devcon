@@ -23,6 +23,9 @@ impl Devcontainer {
     /// selecting the appropriate container provider based on user settings.
     ///
     /// Looks for `.devcontainer/devcontainer.json` first, then `.devcontainer.json`.
+    ///
+    /// # Errors
+    /// Returns an error if the config file is missing, cannot be read, or fails to parse.
     pub fn load(directory: &Path) -> Result<Self, std::io::Error> {
         let file = directory.join(".devcontainer").join("devcontainer.json");
         let file = if file.is_file() {
@@ -57,6 +60,9 @@ impl Devcontainer {
     /// Build, start, and attach to the dev container, running lifecycle hooks.
     ///
     /// If `use_cache` is `false`, the image is built with `--no-cache`.
+    ///
+    /// # Errors
+    /// Returns an error if any provider operation (build, start, attach, etc.) fails.
     pub fn run(&self, use_cache: bool) -> std::io::Result<()> {
         let provider = &self.provider;
 
@@ -77,6 +83,9 @@ impl Devcontainer {
     }
 
     /// Stop and remove the existing container, then run it fresh.
+    ///
+    /// # Errors
+    /// Returns an error if stopping, removing, or restarting the container fails.
     pub fn rebuild(&self, use_cache: bool) -> std::io::Result<()> {
         let provider = &self.provider;
         if provider.exists()? {
@@ -182,6 +191,7 @@ impl Devcontainer {
 
     /// Build the list of extra arguments passed to the container create command
     /// (environment variables, working directory, and `runArgs` from config).
+    #[must_use]
     pub fn create_args(&self) -> Vec<String> {
         let mut args = vec![];
 

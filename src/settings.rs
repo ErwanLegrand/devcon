@@ -34,6 +34,7 @@ impl Settings {
     ///
     /// Errors are logged to stderr rather than propagated so that a missing or
     /// malformed config file never prevents the tool from running.
+    #[must_use]
     pub fn load() -> Self {
         match Self::try_load() {
             Ok(settings) => settings,

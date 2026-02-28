@@ -4,10 +4,6 @@ use clap::Parser;
 use clap::Subcommand;
 
 pub(crate) mod commands;
-pub(crate) mod devcontainers;
-pub(crate) mod error;
-pub(crate) mod provider;
-pub(crate) mod settings;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
