@@ -24,7 +24,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Docker Provider Integration Tests
+## [~] Track: Docker Provider Integration Tests
 *Comprehensive integration tests for `Docker` and `DockerCompose` providers — all `Provider` trait methods. Blocked on: DooD Dev Container track.*
 *Link: [./tracks/integration_tests_docker_20260228/](./tracks/integration_tests_docker_20260228/)*
 
