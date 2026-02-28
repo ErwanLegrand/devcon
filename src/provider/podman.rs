@@ -17,6 +17,7 @@ pub struct Podman {
     pub forward_ports: Vec<u16>,
     pub name: String,
     pub run_args: Vec<String>,
+    pub override_command: bool,
     pub user: String,
     pub workspace_folder: String,
 }
@@ -90,7 +91,15 @@ impl Provider for Podman {
         command.arg("-w");
         command.arg(&self.workspace_folder);
         command.arg(tag);
-        command.arg("zsh");
+
+        if self.override_command {
+            command
+                .arg("sh")
+                .arg("-c")
+                .arg("while sleep 1000; do :; done");
+        } else {
+            command.arg("zsh");
+        }
 
         print_command(&command);
 

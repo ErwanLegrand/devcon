@@ -207,13 +207,15 @@ impl Provider for PodmanCompose {
     }
 
     fn exists(&self) -> Result<bool> {
-        let output = Command::new(&self.command)
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("ps")
-            .arg("-aq")
+        // Use `podman ps -aq` with a project label filter so this works even when
+        // podman-compose is not on the PATH and also catches stopped containers.
+        let output = Command::new(&self.podman_command)
+            .args([
+                "ps",
+                "-aq",
+                "--filter",
+                &format!("label=io.podman.compose.project={}", &self.name),
+            ])
             .output()?
             .stdout;
 
@@ -245,19 +247,34 @@ impl Provider for PodmanCompose {
     }
 
     fn cp(&self, source: String, destination: String) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        // podman-compose has no native cp; find the service container via project label
+        // and delegate to `podman cp`.
+        let output = Command::new(&self.podman_command)
+            .args([
+                "ps",
+                "-q",
+                "--filter",
+                &format!("label=io.podman.compose.project={}", &self.name),
+                "--filter",
+                &format!("label=io.podman.compose.service={}", &self.service),
+            ])
+            .output()?
+            .stdout;
 
-        let mut command = Command::new(&self.command);
+        let container_id = String::from_utf8(output)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+
+        if container_id.is_empty() {
+            return Ok(false);
+        }
+
+        let mut command = Command::new(&self.podman_command);
         command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&docker_override)
-            .arg("-p")
-            .arg(&self.name)
             .arg("cp")
             .arg(source)
-            .arg(format!("{}:{}", &self.name, destination));
+            .arg(format!("{container_id}:{destination}"));
 
         print_command(&command);
 

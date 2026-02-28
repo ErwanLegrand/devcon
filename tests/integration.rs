@@ -14,6 +14,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use devcont::provider::Provider;
 use devcont::provider::docker::Docker;
 use devcont::provider::docker_compose::DockerCompose;
+use devcont::provider::podman::Podman;
+use devcont::provider::podman_compose::PodmanCompose;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -93,6 +95,65 @@ impl Drop for ComposeGuard {
     }
 }
 
+/// RAII guard: calls `podman rm -f <name>` and `podman rmi -f <image>` when dropped.
+struct PodmanGuard {
+    name: String,
+    image: String,
+}
+
+impl PodmanGuard {
+    fn new(name: &str, image: &str) -> Self {
+        PodmanGuard {
+            name: name.to_string(),
+            image: image.to_string(),
+        }
+    }
+}
+
+impl Drop for PodmanGuard {
+    fn drop(&mut self) {
+        Command::new("podman")
+            .args(["rm", "-f", &self.name])
+            .output()
+            .ok();
+        Command::new("podman")
+            .args(["rmi", "-f", &self.image])
+            .output()
+            .ok();
+    }
+}
+
+/// RAII guard: runs `podman-compose -f <file> -p <name> down --remove-orphans` when dropped.
+struct PodmanComposeGuard {
+    name: String,
+    file: String,
+}
+
+impl PodmanComposeGuard {
+    fn new(name: &str, file: &str) -> Self {
+        PodmanComposeGuard {
+            name: name.to_string(),
+            file: file.to_string(),
+        }
+    }
+}
+
+impl Drop for PodmanComposeGuard {
+    fn drop(&mut self) {
+        Command::new("podman-compose")
+            .args([
+                "-f",
+                &self.file,
+                "-p",
+                &self.name,
+                "down",
+                "--remove-orphans",
+            ])
+            .output()
+            .ok();
+    }
+}
+
 /// Returns the path to `tests/fixtures/integration/<name>`.
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -109,6 +170,11 @@ fn unique_name(prefix: &str) -> String {
         .expect("system clock error")
         .as_nanos();
     format!("devcont-itest-{prefix}-{ts}")
+}
+
+/// Returns `true` if the given command is available on the system PATH.
+fn command_available(cmd: &str) -> bool {
+    Command::new(cmd).arg("--version").output().is_ok()
 }
 
 /// Build a Docker image from a fixture directory.
@@ -199,6 +265,48 @@ fn load_compose_provider(name: &str) -> DockerCompose {
             .into_owned(),
         name: name.to_string(),
         forward_ports: vec![],
+        run_args: vec![],
+        service: "app".to_string(),
+        user: "root".to_string(),
+        // alpine does not have /workspace; use /tmp which always exists.
+        workspace_folder: "/tmp".to_string(),
+    }
+}
+
+/// Construct a `Podman` provider pointed at the `basic` fixture with the given container name.
+fn load_podman_provider(name: &str) -> Podman {
+    Podman {
+        build_args: std::collections::HashMap::new(),
+        command: "podman".to_string(),
+        directory: fixture_path("basic").to_string_lossy().into_owned(),
+        file: fixture_path("basic")
+            .join(".devcontainer")
+            .join("Dockerfile")
+            .to_string_lossy()
+            .into_owned(),
+        forward_ports: vec![],
+        name: name.to_string(),
+        run_args: vec![],
+        user: "root".to_string(),
+        workspace_folder: "/workspace".to_string(),
+        override_command: true,
+    }
+}
+
+/// Construct a `PodmanCompose` provider pointed at the `compose` fixture with the given project name.
+fn load_podman_compose_provider(name: &str) -> PodmanCompose {
+    let compose_file = fixture_path("compose")
+        .join("docker-compose.yml")
+        .to_string_lossy()
+        .into_owned();
+    PodmanCompose {
+        build_args: std::collections::HashMap::new(),
+        command: "podman-compose".to_string(),
+        podman_command: "podman".to_string(),
+        directory: fixture_path("compose").to_string_lossy().into_owned(),
+        file: compose_file,
+        forward_ports: vec![],
+        name: name.to_string(),
         run_args: vec![],
         service: "app".to_string(),
         user: "root".to_string(),
@@ -610,6 +718,346 @@ fn test_compose_stop_and_rm() {
     let provider = load_compose_provider(&name);
     // ComposeGuard is a safety net; rm() is called explicitly here.
     let _guard = ComposeGuard::new(&name);
+
+    provider.build(true).expect("build() failed");
+    provider.start().expect("start() failed");
+    provider.stop().expect("stop() failed");
+    assert!(provider.rm().expect("rm() failed"), "rm() should succeed");
+    assert!(
+        !provider.exists().expect("exists() failed"),
+        "exists() should be false after rm"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Podman provider tests
+// ---------------------------------------------------------------------------
+
+/// `exists()` returns `false` for a container that has never been created.
+#[test]
+fn test_podman_exists_returns_false_before_create() {
+    let name = unique_name("podman-pre");
+    let provider = load_podman_provider(&name);
+    assert!(
+        !provider.exists().expect("exists() failed"),
+        "exists() should be false before create"
+    );
+}
+
+/// `build()` + `create()` succeed and `exists()` returns `true` afterwards.
+#[test]
+fn test_podman_build_and_create() {
+    let name = unique_name("podman-create");
+    let provider = load_podman_provider(&name);
+    let image = format!("devcont/{name}");
+    let _guard = PodmanGuard::new(&name, &image);
+
+    assert!(
+        provider.build(true).expect("build() failed"),
+        "build() should succeed"
+    );
+    assert!(
+        provider.create(vec![]).expect("create() failed"),
+        "create() should succeed"
+    );
+    assert!(
+        provider.exists().expect("exists() failed"),
+        "exists() should be true after create"
+    );
+}
+
+/// `start()` succeeds and `running()` returns `true` afterwards.
+#[test]
+fn test_podman_start_and_running() {
+    let name = unique_name("podman-start");
+    let provider = load_podman_provider(&name);
+    let image = format!("devcont/{name}");
+    let _guard = PodmanGuard::new(&name, &image);
+
+    provider.build(true).expect("build() failed");
+    provider.create(vec![]).expect("create() failed");
+    assert!(
+        provider.start().expect("start() failed"),
+        "start() should succeed"
+    );
+    assert!(
+        provider.running().expect("running() failed"),
+        "running() should be true after start"
+    );
+}
+
+/// `stop()` succeeds and `running()` returns `false` afterwards.
+#[test]
+fn test_podman_running_returns_false_when_stopped() {
+    let name = unique_name("podman-stop");
+    let provider = load_podman_provider(&name);
+    let image = format!("devcont/{name}");
+    let _guard = PodmanGuard::new(&name, &image);
+
+    provider.build(true).expect("build() failed");
+    provider.create(vec![]).expect("create() failed");
+    provider.start().expect("start() failed");
+    assert!(
+        provider.stop().expect("stop() failed"),
+        "stop() should succeed"
+    );
+    assert!(
+        !provider.running().expect("running() failed"),
+        "running() should be false after stop"
+    );
+}
+
+/// `restart()` succeeds on a running container and it remains running.
+#[test]
+fn test_podman_restart() {
+    let name = unique_name("podman-restart");
+    let provider = load_podman_provider(&name);
+    let image = format!("devcont/{name}");
+    let _guard = PodmanGuard::new(&name, &image);
+
+    provider.build(true).expect("build() failed");
+    provider.create(vec![]).expect("create() failed");
+    provider.start().expect("start() failed");
+    assert!(
+        provider.restart().expect("restart() failed"),
+        "restart() should succeed"
+    );
+    assert!(
+        provider.running().expect("running() failed"),
+        "running() should be true after restart"
+    );
+}
+
+/// `exec()` runs a command inside the container and returns `true` on success.
+#[test]
+fn test_podman_exec() {
+    let name = unique_name("podman-exec");
+    let provider = load_podman_provider(&name);
+    let image = format!("devcont/{name}");
+    let _guard = PodmanGuard::new(&name, &image);
+
+    provider.build(true).expect("build() failed");
+    provider.create(vec![]).expect("create() failed");
+    provider.start().expect("start() failed");
+    assert!(
+        provider
+            .exec("echo hello".to_string())
+            .expect("exec() failed"),
+        "exec() should succeed"
+    );
+}
+
+/// `cp()` copies a host file into the container; the file is then present.
+#[test]
+fn test_podman_cp() {
+    let name = unique_name("podman-cp");
+    let provider = load_podman_provider(&name);
+    let image = format!("devcont/{name}");
+    let _guard = PodmanGuard::new(&name, &image);
+
+    provider.build(true).expect("build() failed");
+    provider.create(vec![]).expect("create() failed");
+    provider.start().expect("start() failed");
+
+    let tmp_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tmp");
+    std::fs::create_dir_all(&tmp_dir).expect("failed to create tmp/");
+    let src = tmp_dir.join(format!("podman_cp_test_{name}.txt"));
+    std::fs::write(&src, b"hello from host").expect("failed to write temp file");
+
+    let dest = "/tmp/podman_cp_test_file.txt".to_string();
+    assert!(
+        provider
+            .cp(src.to_string_lossy().into_owned(), dest.clone())
+            .expect("cp() failed"),
+        "cp() should succeed"
+    );
+    assert!(
+        provider
+            .exec(format!("test -f {dest}"))
+            .expect("exec() failed"),
+        "file should exist in container after cp"
+    );
+
+    std::fs::remove_file(&src).ok();
+}
+
+/// `stop()` + `rm()` remove the container; `exists()` returns `false`.
+#[test]
+fn test_podman_stop_and_rm() {
+    let name = unique_name("podman-rm");
+    let provider = load_podman_provider(&name);
+    let image = format!("devcont/{name}");
+    let _guard = PodmanGuard::new(&name, &image);
+
+    provider.build(true).expect("build() failed");
+    provider.create(vec![]).expect("create() failed");
+    provider.start().expect("start() failed");
+    provider.stop().expect("stop() failed");
+    assert!(provider.rm().expect("rm() failed"), "rm() should succeed");
+    assert!(
+        !provider.exists().expect("exists() failed"),
+        "exists() should be false after rm"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// PodmanCompose provider tests
+// ---------------------------------------------------------------------------
+
+/// `exists()` returns `false` for a compose project that has never been started.
+#[test]
+fn test_podman_compose_exists_returns_false_before_build() {
+    let name = unique_name("pcompose-pre");
+    let provider = load_podman_compose_provider(&name);
+    assert!(
+        !provider.exists().expect("exists() failed"),
+        "exists() should be false before build"
+    );
+}
+
+/// `build()` + `start()` succeed; `exists()` and `running()` both return `true`.
+#[test]
+fn test_podman_compose_build_and_start() {
+    if !command_available("podman-compose") {
+        eprintln!("SKIP: podman-compose not found");
+        return;
+    }
+    let name = unique_name("pcompose-start");
+    let provider = load_podman_compose_provider(&name);
+    let file = fixture_path("compose")
+        .join("docker-compose.yml")
+        .to_string_lossy()
+        .into_owned();
+    let _guard = PodmanComposeGuard::new(&name, &file);
+
+    assert!(
+        provider.build(true).expect("build() failed"),
+        "build() should succeed"
+    );
+    assert!(
+        provider.create(vec![]).expect("create() failed"),
+        "create() should succeed (no-op for compose)"
+    );
+    assert!(
+        provider.start().expect("start() failed"),
+        "start() should succeed"
+    );
+    assert!(
+        provider.exists().expect("exists() failed"),
+        "exists() should be true after start"
+    );
+    assert!(
+        provider.running().expect("running() failed"),
+        "running() should be true after start"
+    );
+}
+
+/// `exec()` runs a command in the service container.
+#[test]
+fn test_podman_compose_exec() {
+    if !command_available("podman-compose") {
+        eprintln!("SKIP: podman-compose not found");
+        return;
+    }
+    let name = unique_name("pcompose-exec");
+    let provider = load_podman_compose_provider(&name);
+    let file = fixture_path("compose")
+        .join("docker-compose.yml")
+        .to_string_lossy()
+        .into_owned();
+    let _guard = PodmanComposeGuard::new(&name, &file);
+
+    provider.build(true).expect("build() failed");
+    provider.start().expect("start() failed");
+    assert!(
+        provider
+            .exec("echo hello".to_string())
+            .expect("exec() failed"),
+        "exec() should succeed"
+    );
+}
+
+/// `cp()` copies a host file into the service container.
+#[test]
+fn test_podman_compose_cp() {
+    if !command_available("podman-compose") {
+        eprintln!("SKIP: podman-compose not found");
+        return;
+    }
+    let name = unique_name("pcompose-cp");
+    let provider = load_podman_compose_provider(&name);
+    let file = fixture_path("compose")
+        .join("docker-compose.yml")
+        .to_string_lossy()
+        .into_owned();
+    let _guard = PodmanComposeGuard::new(&name, &file);
+
+    provider.build(true).expect("build() failed");
+    provider.start().expect("start() failed");
+
+    let tmp_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tmp");
+    std::fs::create_dir_all(&tmp_dir).expect("failed to create tmp/");
+    let src = tmp_dir.join(format!("pcompose_cp_{name}.txt"));
+    std::fs::write(&src, b"hello from host").expect("failed to write temp file");
+
+    let dest = "/tmp/pcompose_cp_file.txt".to_string();
+    assert!(
+        provider
+            .cp(src.to_string_lossy().into_owned(), dest.clone())
+            .expect("cp() failed"),
+        "cp() should succeed"
+    );
+    assert!(
+        provider
+            .exec(format!("test -f {dest}"))
+            .expect("exec() failed"),
+        "file should exist in container after cp"
+    );
+
+    std::fs::remove_file(&src).ok();
+}
+
+/// `restart()` succeeds and the service remains running.
+#[test]
+fn test_podman_compose_restart() {
+    if !command_available("podman-compose") {
+        eprintln!("SKIP: podman-compose not found");
+        return;
+    }
+    let name = unique_name("pcompose-restart");
+    let provider = load_podman_compose_provider(&name);
+    let file = fixture_path("compose")
+        .join("docker-compose.yml")
+        .to_string_lossy()
+        .into_owned();
+    let _guard = PodmanComposeGuard::new(&name, &file);
+
+    provider.build(true).expect("build() failed");
+    provider.start().expect("start() failed");
+    assert!(
+        provider.restart().expect("restart() failed"),
+        "restart() should succeed"
+    );
+    assert!(
+        provider.running().expect("running() failed"),
+        "running() should be true after restart"
+    );
+}
+
+/// `stop()` + `rm()` shut down the project; `exists()` returns `false`.
+#[test]
+fn test_podman_compose_stop_and_rm() {
+    if !command_available("podman-compose") {
+        eprintln!("SKIP: podman-compose not found");
+        return;
+    }
+    let name = unique_name("pcompose-rm");
+    let provider = load_podman_compose_provider(&name);
+    let file = fixture_path("compose")
+        .join("docker-compose.yml")
+        .to_string_lossy()
+        .into_owned();
+    let _guard = PodmanComposeGuard::new(&name, &file);
 
     provider.build(true).expect("build() failed");
     provider.start().expect("start() failed");

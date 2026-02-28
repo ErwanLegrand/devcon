@@ -308,6 +308,7 @@ fn build_provider(
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     run_args: config.run_args.clone(),
+                    override_command: false,
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
                 }))
