@@ -2,9 +2,14 @@
 
 ## Git Commits
 
-- **Never use command substitution** (`$(cat <<'EOF'...EOF)`) for commit messages — this pattern requires user validation at every commit.
-- Provide commit messages **directly** via a temp file:
+- **Always use** `git commit -m 'message'` directly — no command substitution, no heredocs, no temp files.
+- For multi-line messages, use multiple `-m` flags (each becomes a paragraph):
   ```bash
-  printf 'subject line\n\nbody paragraph' > /tmp/commit_msg && git commit -F /tmp/commit_msg
+  git commit -m 'subject line' -m 'body paragraph'
   ```
-- For single-line messages, `-m "message"` is fine.
+- Single-line: `git commit -m 'subject line'`
+
+## Temp Files
+
+- **Never write to `/tmp`** — that path requires user approval for every write.
+- If temp files are needed, create a `tmp/` directory in the workspace root and add it to `.gitignore`.
