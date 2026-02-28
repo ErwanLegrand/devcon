@@ -11,7 +11,9 @@
 
 ## File Reading and Editing
 
-- **Never use `sed` via Bash** — use the Read tool to read file contents (including specific line ranges via `offset`/`limit`), and the Edit tool to make changes.
+- **Never use `sed` to read files** — use the Read tool instead (supports `offset`/`limit` for specific line ranges).
+- **`sed` for in-place string substitution is fine** (e.g., `sed -i 's/foo/bar/g' file`), unless the Edit tool suits the case better.
+- Use the Edit tool for targeted, reviewable changes to existing files.
 - Reserve Bash for commands that have no dedicated tool equivalent.
 
 ## Temp Files
