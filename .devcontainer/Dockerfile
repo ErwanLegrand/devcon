@@ -10,14 +10,18 @@ RUN apt-get update && \
         pkg-config \
         ca-certificates \
         sudo \
-        docker.io && \
+        docker.io \
+        podman \
+        podman-compose && \
     rm -rf /var/lib/apt/lists/*
 
 RUN cargo install cargo-llvm-cov cargo-deny
 
 RUN adduser --disabled-password --gecos "" $USER && \
     echo "${USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
-    usermod -aG docker $USER
+    usermod -aG docker $USER && \
+    echo "devcont:100000:65536" >> /etc/subuid && \
+    echo "devcont:100000:65536" >> /etc/subgid
 
 WORKDIR /workspace
 

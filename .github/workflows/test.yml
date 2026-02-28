@@ -22,6 +22,10 @@ jobs:
         components: llvm-tools-preview
     - name: Run tests
       run: cargo test --verbose
+    - name: Install Podman and podman-compose
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends podman podman-compose
     - name: Run integration tests
       run: cargo test --test integration --verbose
     - name: Install cargo-llvm-cov
