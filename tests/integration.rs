@@ -518,6 +518,10 @@ fn test_compose_build_and_start() {
         "build() should succeed"
     );
     assert!(
+        provider.create(vec![]).expect("create() failed"),
+        "create() should succeed (no-op for compose)"
+    );
+    assert!(
         provider.start().expect("start() failed"),
         "start() should succeed"
     );

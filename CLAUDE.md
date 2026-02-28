@@ -9,6 +9,11 @@
   ```
 - Single-line: `git commit -m 'subject line'`
 
+## File Reading and Editing
+
+- **Never use `sed` via Bash** — use the Read tool to read file contents (including specific line ranges via `offset`/`limit`), and the Edit tool to make changes.
+- Reserve Bash for commands that have no dedicated tool equivalent.
+
 ## Temp Files
 
 - **Never write to `/tmp`** — that path requires user approval for every write.
