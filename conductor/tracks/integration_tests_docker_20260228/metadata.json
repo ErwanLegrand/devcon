@@ -1,9 +1,0 @@
-{
-  "track_id": "integration_tests_docker_20260228",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-02-28T00:00:00Z",
-  "updated_at": "2026-02-28T00:00:00Z",
-  "description": "Comprehensive integration tests for the Docker and DockerCompose provider implementations, covering all Provider trait methods",
-  "depends_on": ["dood_devcontainer_20260228"]
-}
