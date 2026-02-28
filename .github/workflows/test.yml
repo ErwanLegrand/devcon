@@ -20,8 +20,8 @@ jobs:
       with:
         toolchain: '1.85'
         components: llvm-tools-preview
-    - name: Run tests
-      run: cargo test --verbose
+    - name: Run unit and doc tests
+      run: cargo test --lib --bins --verbose
     - name: Install Podman and podman-compose
       run: |
         sudo apt-get update -qq
