@@ -97,8 +97,6 @@ impl Provider for Podman {
                 .arg("sh")
                 .arg("-c")
                 .arg("while sleep 1000; do :; done");
-        } else {
-            command.arg("zsh");
         }
 
         print_command(&command);
