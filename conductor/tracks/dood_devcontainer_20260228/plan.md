@@ -62,10 +62,10 @@
 - [x] Task: Update `test.yml` to run integration tests
     - [x] Add step: `cargo test --test integration --verbose` after unit tests
     - [x] Confirm Docker is available on `ubuntu-latest` without extra setup
-- [ ] Task: Run full CI quality gate locally
-    - [ ] `cargo test` ✓
-    - [ ] `cargo test --test integration` ✓
-    - [ ] `cargo clippy --all-targets -- -D warnings` ✓
-    - [ ] `cargo fmt --check` ✓
-    - [ ] `cargo deny check licenses bans advisories` ✓
+- [x] Task: Run full CI quality gate locally
+    - [x] `cargo test` ✓
+    - [x] `cargo test --test integration` ✓
+    - [x] `cargo clippy --all-targets -- -D warnings` ✓
+    - [x] `cargo fmt --check` ✓
+    - [x] `cargo deny check licenses bans advisories` ✓
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: CI Integration' (Protocol in workflow.md)

@@ -7,7 +7,7 @@
 //! and registers a RAII guard that force-removes the container on drop, so
 //! cleanup runs even when a test panics.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -59,7 +59,7 @@ fn unique_name(prefix: &str) -> String {
 ///
 /// Uses the Dockerfile at `<fixture_dir>/Dockerfile` with the fixture
 /// directory as build context. Returns the image tag `devcont/<name>`.
-fn build_image(fixture: &PathBuf, name: &str) -> String {
+fn build_image(fixture: &Path, name: &str) -> String {
     let image = format!("devcont/{name}");
     let status = Command::new("docker")
         .args([
