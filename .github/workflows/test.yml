@@ -22,6 +22,8 @@ jobs:
         components: llvm-tools-preview
     - name: Run tests
       run: cargo test --verbose
+    - name: Run integration tests
+      run: cargo test --test integration --verbose
     - name: Install cargo-llvm-cov
       uses: taiki-e/install-action@cargo-llvm-cov
     - name: Run tests with coverage (enforce ≥80% threshold)

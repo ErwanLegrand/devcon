@@ -40,6 +40,13 @@ if [[ -f "Cargo.toml" ]]; then
     cargo check --quiet && log_success "Project builds successfully"
 fi
 
+# Check Docker socket accessibility (DooD)
+if [[ -S /var/run/docker.sock ]] && docker version &>/dev/null; then
+    log_success "Docker socket accessible (DooD ready)"
+else
+    log_warn "Docker socket not accessible — ensure /var/run/docker.sock is mounted from the host"
+fi
+
 echo ""
 log_success "devcont development environment is ready!"
 echo ""

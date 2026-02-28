@@ -2,15 +2,15 @@
 
 ## Phase 1: Dev Container Wiring
 
-- [ ] Task: Install Docker CLI in Dockerfile
-    - [ ] Add `docker.io` to apt-get install in `.devcontainer/Dockerfile`
-    - [ ] Add `devcont` user to `docker` group via `usermod -aG docker $USER`
-    - [ ] Verify `docker --version` runs as the `devcont` user in a test build
-- [ ] Task: Add socket bind-mount to devcontainer.json
-    - [ ] Add `"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"` to `mounts`
-    - [ ] Verify `docker ps` works inside the dev container after rebuild
-- [ ] Task: Update post-create.sh
-    - [ ] Add a check that prints a warning if `/var/run/docker.sock` is not
+- [x] Task: Install Docker CLI in Dockerfile
+    - [x] Add `docker.io` to apt-get install in `.devcontainer/Dockerfile`
+    - [x] Add `devcont` user to `docker` group via `usermod -aG docker $USER`
+    - [x] Verify `docker --version` runs as the `devcont` user in a test build
+- [x] Task: Add socket bind-mount to devcontainer.json
+    - [x] Add `"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"` to `mounts`
+    - [x] Verify `docker ps` works inside the dev container after rebuild
+- [x] Task: Update post-create.sh
+    - [x] Add a check that prints a warning if `/var/run/docker.sock` is not
           accessible (host may not have Docker running)
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Dev Container Wiring' (Protocol in workflow.md)
 
@@ -59,9 +59,9 @@
 
 ## Phase 4: CI Integration
 
-- [ ] Task: Update `test.yml` to run integration tests
-    - [ ] Add step: `cargo test --test integration --verbose` after unit tests
-    - [ ] Confirm Docker is available on `ubuntu-latest` without extra setup
+- [x] Task: Update `test.yml` to run integration tests
+    - [x] Add step: `cargo test --test integration --verbose` after unit tests
+    - [x] Confirm Docker is available on `ubuntu-latest` without extra setup
 - [ ] Task: Run full CI quality gate locally
     - [ ] `cargo test` ✓
     - [ ] `cargo test --test integration` ✓

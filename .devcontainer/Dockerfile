@@ -9,13 +9,15 @@ RUN apt-get update && \
         build-essential \
         pkg-config \
         ca-certificates \
-        sudo && \
+        sudo \
+        docker.io && \
     rm -rf /var/lib/apt/lists/*
 
 RUN cargo install cargo-llvm-cov cargo-deny
 
 RUN adduser --disabled-password --gecos "" $USER && \
-    echo "${USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    echo "${USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
+    usermod -aG docker $USER
 
 WORKDIR /workspace
 
