@@ -12,7 +12,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## [ ] Track: Code Inventory
 *Audit the codebase for code unnecessary to stated goals; document findings and decide on removal or refactoring.*
-*(To be planned)*
+*Link: [./tracks/code_inventory_20260228/](./tracks/code_inventory_20260228/)*
 
 ---
 
