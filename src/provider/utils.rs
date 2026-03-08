@@ -3,14 +3,14 @@ use std::env;
 use std::io::Result;
 use tinytemplate::TinyTemplate;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct TemplateContext {
     service: String,
     envs: Vec<TemplateEntry>,
     volumes: Vec<TemplateEntry>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct TemplateEntry {
     source: String,
     dest: String,
@@ -23,7 +23,7 @@ static TEMPLATE: &str = include_str!("../../templates/docker-compose.yml");
 ///
 /// # Errors
 /// Returns an error if the template cannot be rendered or the file cannot be written.
-pub fn create_compose_override(service: &str) -> Result<String> {
+pub(crate) fn create_compose_override(service: &str) -> Result<String> {
     let dir = env::temp_dir();
     let file = dir.join("docker-compose.yml");
     let mut volumes = vec![];
