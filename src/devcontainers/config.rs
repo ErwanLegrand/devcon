@@ -22,9 +22,6 @@ impl Default for ShutdownAction {
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     name: String,
-    // Retained for devcontainer spec completeness; may be used in future features.
-    #[allow(dead_code)]
-    pub file: Option<String>,
     pub build: Option<Build>,
     #[serde(default)]
     pub forward_ports: Vec<u16>,

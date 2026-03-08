@@ -26,13 +26,11 @@
           (verify first) — SettingsLoad IS used in settings.rs:61, retained
     - [x] `cargo test` must pass
     - [x] Commit: `refactor(error): remove unused Provider error variant`
-- [ ] Task: Remove or wire `Config::file` (Item 2)
-    - [ ] If decision is Remove: delete the field and its `#[allow(dead_code)]`
+- [x] Task: Remove or wire `Config::file` (Item 2)
+    - [x] If decision is Remove: delete the field and its `#[allow(dead_code)]`
           from `src/devcontainers/config.rs`; update `Config::parse` if needed
-    - [ ] If decision is Retain: add inline comment citing the spec section
-          (e.g., `// Dev Containers spec §X.Y — reserved for future use`)
-    - [ ] `cargo test` must pass
-    - [ ] Commit: `refactor(config): remove/retain Config::file per findings`
+    - [x] `cargo test` must pass
+    - [x] Commit: `refactor(config): remove/retain Config::file per findings`
 - [ ] Task: Remove or wire `Build::context` (Item 3)
     - [ ] If decision is Remove: delete the field and update `Build` struct
     - [ ] If decision is Implement: wire `context` as the Docker build context
