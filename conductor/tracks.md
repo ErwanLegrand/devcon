@@ -36,7 +36,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Dev Containers Spec Compliance — Phase 1
+## [x] Track: Dev Containers Spec Compliance — Phase 1
 *Add image field support, missing lifecycle hooks (postStartCommand, postAttachCommand, initializeCommand), and OneOrMany array form for all hook values.*
 *Link: [./tracks/spec_compliance_phase1_20260308/](./tracks/spec_compliance_phase1_20260308/)*
 
