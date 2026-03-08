@@ -30,11 +30,21 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+## [ ] Track: podman-compose Provider Completion
+*Fix concrete bugs and missing wiring in the PodmanCompose provider (running() flags, attach shell, cp() ID handling, remote_env injection, rm() compatibility). Same fixes applied to DockerCompose where applicable.*
+*Link: [./tracks/podman_compose_completion_20260308/](./tracks/podman_compose_completion_20260308/)*
+
+---
+
+## [ ] Track: Dev Containers Spec Compliance — Phase 1
+*Add image field support, missing lifecycle hooks (postStartCommand, postAttachCommand, initializeCommand), and OneOrMany array form for all hook values.*
+*Link: [./tracks/spec_compliance_phase1_20260308/](./tracks/spec_compliance_phase1_20260308/)*
+
+---
+
 ## Future Tracks (not yet planned)
 
-- Dev Containers spec compliance audit and gap fixes
 - Architecture improvements (provider abstraction, error handling patterns, module structure)
 - Thorough testing and fuzzing (unit, integration, fuzz harnesses for config parsing)
 - `cargo devcont` subcommand packaging and distribution
-- podman-compose provider completion
 - Documentation (man page, improved README, inline doc coverage)

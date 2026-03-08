@@ -1,0 +1,8 @@
+{
+  "track_id": "podman_compose_completion_20260308",
+  "type": "bug/chore",
+  "status": "new",
+  "created_at": "2026-03-08T00:00:00Z",
+  "updated_at": "2026-03-08T00:00:00Z",
+  "description": "Fix concrete bugs and missing wiring in the PodmanCompose provider and apply the same fixes to DockerCompose where applicable."
+}

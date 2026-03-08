@@ -1,0 +1,8 @@
+{
+  "track_id": "spec_compliance_phase1_20260308",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-03-08T00:00:00Z",
+  "updated_at": "2026-03-08T00:00:00Z",
+  "description": "Phase 1 Dev Containers spec compliance: image field support, missing lifecycle hooks (postStartCommand, postAttachCommand, initializeCommand), and array form for hook values."
+}
