@@ -13,6 +13,7 @@ pub struct DockerCompose {
     pub file: String,
     pub name: String,
     pub service: String,
+    pub shell: String,
     pub user: String,
     pub workspace_folder: String,
 }
@@ -127,7 +128,7 @@ impl Provider for DockerCompose {
             .arg("-w")
             .arg(&self.workspace_folder);
 
-        command.arg(&self.service).arg("zsh");
+        command.arg(&self.service).arg(&self.shell);
 
         print_command(&command);
 

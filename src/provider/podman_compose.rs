@@ -14,6 +14,7 @@ pub struct PodmanCompose {
     pub file: String,
     pub name: String,
     pub service: String,
+    pub shell: String,
     pub user: String,
     pub workspace_folder: String,
 }
@@ -127,7 +128,7 @@ impl Provider for PodmanCompose {
             .arg("-w")
             .arg(&self.workspace_folder)
             .arg(&self.service)
-            .arg("zsh");
+            .arg(&self.shell);
 
         print_command(&command);
 

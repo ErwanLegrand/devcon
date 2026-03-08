@@ -243,6 +243,7 @@ fn build_provider(
                     file: compose_path.to_string_lossy().to_string(),
                     name: config.safe_name(),
                     service: service.to_string(),
+                    shell: "sh".to_string(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
                 }))
@@ -285,6 +286,7 @@ fn build_provider(
                     name: config.safe_name(),
                     podman_command: "podman".to_string(),
                     service: service.to_string(),
+                    shell: "sh".to_string(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
                 }))

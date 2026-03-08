@@ -264,6 +264,7 @@ fn load_compose_provider(name: &str) -> DockerCompose {
             .into_owned(),
         name: name.to_string(),
         service: "app".to_string(),
+        shell: "sh".to_string(),
         user: "root".to_string(),
         // alpine does not have /workspace; use /tmp which always exists.
         workspace_folder: "/tmp".to_string(),
@@ -303,6 +304,7 @@ fn load_podman_compose_provider(name: &str) -> PodmanCompose {
         file: compose_file,
         name: name.to_string(),
         service: "app".to_string(),
+        shell: "sh".to_string(),
         user: "root".to_string(),
         // alpine does not have /workspace; use /tmp which always exists.
         workspace_folder: "/tmp".to_string(),

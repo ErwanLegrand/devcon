@@ -7,16 +7,14 @@
     - [x] Add `--filter` `status=running` to the `podman ps` call
     - [x] `cargo test --test integration` must pass
     - [x] Commit: `fix(provider): fix PodmanCompose::running() flag conflict`
-- [ ] Task: Fix `attach()` shell in both compose providers (FR-002)
-    - [ ] Add `shell: String` field to `DockerCompose` struct in `docker_compose.rs`
-    - [ ] Add `shell: String` field to `PodmanCompose` struct in `podman_compose.rs`
-    - [ ] Replace hardcoded `"zsh"` with `&self.shell` in both `attach()` impls
-    - [ ] Update `build_provider` in `src/devcontainers/mod.rs` to pass `shell:
-          "sh".to_string()` for both compose providers
-    - [ ] Update `load_compose_provider` and `load_podman_compose_provider` in
-          `tests/integration.rs` to include `shell: "sh".to_string()`
-    - [ ] `cargo test --test integration` must pass
-    - [ ] Commit: `fix(provider): replace hardcoded zsh with configurable shell in compose attach`
+- [x] Task: Fix `attach()` shell in both compose providers (FR-002)
+    - [x] Add `shell: String` field to `DockerCompose` struct in `docker_compose.rs`
+    - [x] Add `shell: String` field to `PodmanCompose` struct in `podman_compose.rs`
+    - [x] Replace hardcoded `"zsh"` with `&self.shell` in both `attach()` impls
+    - [x] Update `build_provider` in `src/devcontainers/mod.rs` to pass `shell: "sh".to_string()`
+    - [x] Update `load_compose_provider` and `load_podman_compose_provider` in `tests/integration.rs`
+    - [x] `cargo test --test integration` must pass
+    - [x] Commit: `fix(provider): replace hardcoded zsh with configurable shell in compose attach`
 - [ ] Task: Fix `PodmanCompose::cp()` container ID resolution (FR-003)
     - [ ] Change `podman ps` output processing to take only the first non-empty
           line (`.lines().find(|l| !l.trim().is_empty())`)
