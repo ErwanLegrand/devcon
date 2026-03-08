@@ -1,6 +1,7 @@
 pub mod config;
 pub mod one_or_many;
 
+use crate::devcontainers::one_or_many::OneOrMany;
 use crate::provider::Provider;
 use crate::provider::docker::{BuildSource, Docker};
 use crate::provider::docker_compose::DockerCompose;
@@ -11,6 +12,28 @@ use config::Config;
 use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
+
+/// Execute a lifecycle hook inside the container via the provider.
+///
+/// - `One(cmd)` → `provider.exec(cmd)` (shell-wrapped by the provider)
+/// - `Many(parts)` → join parts with spaces and exec (simple; args must be space-safe)
+fn exec_hook(provider: &dyn Provider, hook: &OneOrMany) -> std::io::Result<bool> {
+    match hook {
+        OneOrMany::One(cmd) => provider.exec(cmd.clone()),
+        OneOrMany::Many(parts) => provider.exec(parts.join(" ")),
+    }
+}
+
+/// Execute a lifecycle hook on the host (not inside the container).
+///
+/// - `One(cmd)` → `sh -c <cmd>`
+/// - `Many(parts)` → `parts[0] parts[1..]` (no shell, injection-safe)
+fn exec_host_hook(hook: &OneOrMany) -> std::io::Result<()> {
+    if let Some((prog, args)) = hook.to_exec_parts() {
+        std::process::Command::new(&prog).args(&args).status()?;
+    }
+    Ok(())
+}
 
 /// A loaded and configured dev container instance.
 pub struct Devcontainer {
@@ -67,11 +90,8 @@ impl Devcontainer {
     pub fn run(&self, use_cache: bool) -> std::io::Result<()> {
         let provider = &self.provider;
 
-        if let Some(cmd) = self.config.initialize_command.clone() {
-            std::process::Command::new("sh")
-                .arg("-c")
-                .arg(&cmd)
-                .status()?;
+        if let Some(hook) = &self.config.initialize_command {
+            exec_host_hook(hook)?;
         }
 
         self.create(use_cache)?;
@@ -79,16 +99,16 @@ impl Devcontainer {
             provider.start()?;
         }
 
-        if let Some(cmd) = self.config.post_start_command.clone() {
-            provider.exec(cmd)?;
+        if let Some(hook) = &self.config.post_start_command {
+            exec_hook(provider.as_ref(), hook)?;
         }
 
         self.post_create()?;
         provider.restart()?;
         provider.attach()?;
 
-        if let Some(cmd) = self.config.post_attach_command.clone() {
-            provider.exec(cmd)?;
+        if let Some(hook) = &self.config.post_attach_command {
+            exec_hook(provider.as_ref(), hook)?;
         }
 
         if self.config.should_shutdown() {
@@ -126,16 +146,16 @@ impl Devcontainer {
     fn post_create(&self) -> std::io::Result<()> {
         let provider = &self.provider;
 
-        if let Some(command) = self.config.on_create_command.clone() {
-            provider.exec(command)?;
+        if let Some(hook) = &self.config.on_create_command {
+            exec_hook(provider.as_ref(), hook)?;
         }
 
-        if let Some(command) = self.config.update_content_command.clone() {
-            provider.exec(command)?;
+        if let Some(hook) = &self.config.update_content_command {
+            exec_hook(provider.as_ref(), hook)?;
         }
 
-        if let Some(command) = self.config.post_create_command.clone() {
-            provider.exec(command)?;
+        if let Some(hook) = &self.config.post_create_command {
+            exec_hook(provider.as_ref(), hook)?;
         }
 
         self.copy_gitconfig()?;

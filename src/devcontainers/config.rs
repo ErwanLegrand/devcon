@@ -2,6 +2,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::devcontainers::one_or_many::OneOrMany;
 use crate::error::{Error, Result};
 
 #[derive(Debug, Deserialize, Clone)]
@@ -26,12 +27,12 @@ pub struct Config {
     pub build: Option<Build>,
     #[serde(default)]
     pub forward_ports: Vec<u16>,
-    pub initialize_command: Option<String>,
-    pub on_create_command: Option<String>,
-    pub update_content_command: Option<String>,
-    pub post_create_command: Option<String>,
-    pub post_start_command: Option<String>,
-    pub post_attach_command: Option<String>,
+    pub initialize_command: Option<OneOrMany>,
+    pub on_create_command: Option<OneOrMany>,
+    pub update_content_command: Option<OneOrMany>,
+    pub post_create_command: Option<OneOrMany>,
+    pub post_start_command: Option<OneOrMany>,
+    pub post_attach_command: Option<OneOrMany>,
     #[serde(default = "default_remote_user")]
     pub remote_user: String,
     #[serde(default)]
