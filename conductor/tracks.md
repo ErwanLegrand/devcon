@@ -30,7 +30,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: podman-compose Provider Completion
+## [x] Track: podman-compose Provider Completion
 *Fix concrete bugs and missing wiring in the PodmanCompose provider (running() flags, attach shell, cp() ID handling, remote_env injection, rm() compatibility). Same fixes applied to DockerCompose where applicable.*
 *Link: [./tracks/podman_compose_completion_20260308/](./tracks/podman_compose_completion_20260308/)*
 
