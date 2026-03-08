@@ -8,12 +8,21 @@ use super::print_command;
 
 const IMAGE_NAMESPACE: &str = "devcont";
 
+/// Source used to obtain the container image for a provider.
+#[derive(Debug)]
+pub enum BuildSource {
+    /// Build from a Dockerfile at the given path.
+    Dockerfile(String),
+    /// Pull a pre-built image by name.
+    Image(String),
+}
+
 #[derive(Debug)]
 pub struct Docker {
     pub build_args: HashMap<String, String>,
+    pub build_source: BuildSource,
     pub command: String,
     pub directory: String,
-    pub file: String,
     pub forward_ports: Vec<u16>,
     pub name: String,
     pub run_args: Vec<String>,
@@ -25,33 +34,48 @@ pub struct Docker {
 
 impl Provider for Docker {
     fn build(&self, use_cache: bool) -> Result<bool> {
-        let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
+        match &self.build_source {
+            BuildSource::Dockerfile(path) => {
+                let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
 
-        let mut command = Command::new(&self.command);
-        command
-            .arg("build")
-            .arg("-t")
-            .arg(&tag)
-            .arg("-f")
-            .arg(&self.file);
+                let mut command = Command::new(&self.command);
+                command
+                    .arg("build")
+                    .arg("-t")
+                    .arg(&tag)
+                    .arg("-f")
+                    .arg(path);
 
-        if !use_cache {
-            command.arg("--no-cache");
+                if !use_cache {
+                    command.arg("--no-cache");
+                }
+
+                for (key, value) in &self.build_args {
+                    command.arg("--build-arg").arg(format!("{key}={value}"));
+                }
+
+                command.arg(&self.directory);
+
+                print_command(&command);
+
+                Ok(command.status()?.success())
+            }
+            BuildSource::Image(image) => {
+                let mut command = Command::new(&self.command);
+                command.arg("pull").arg(image);
+
+                print_command(&command);
+
+                Ok(command.status()?.success())
+            }
         }
-
-        for (key, value) in &self.build_args {
-            command.arg("--build-arg").arg(format!("{key}={value}"));
-        }
-
-        command.arg(&self.directory);
-
-        print_command(&command);
-
-        Ok(command.status()?.success())
     }
 
     fn create(&self, args: Vec<String>) -> Result<bool> {
-        let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
+        let image = match &self.build_source {
+            BuildSource::Dockerfile(_) => format!("{IMAGE_NAMESPACE}/{}", &self.name),
+            BuildSource::Image(name) => name.clone(),
+        };
 
         let mut command = Command::new(&self.command);
         command.arg("create");
@@ -100,7 +124,7 @@ impl Provider for Docker {
         command.arg(&self.user);
         command.arg("-w");
         command.arg(&self.workspace_folder);
-        command.arg(tag);
+        command.arg(image);
 
         if self.override_command {
             command

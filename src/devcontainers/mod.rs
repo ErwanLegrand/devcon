@@ -1,7 +1,7 @@
 pub mod config;
 
 use crate::provider::Provider;
-use crate::provider::docker::Docker;
+use crate::provider::docker::{BuildSource, Docker};
 use crate::provider::docker_compose::DockerCompose;
 use crate::provider::podman::Podman;
 use crate::provider::podman_compose::PodmanCompose;
@@ -256,15 +256,21 @@ fn build_provider(
                     workspace_folder: config.workspace_folder.clone(),
                 }))
             } else {
-                let dockerfile = config
-                    .dockerfile()
-                    .ok_or_else(|| missing_field("build.dockerfile"))?;
+                let build_source = if let Some(dockerfile) = config.dockerfile() {
+                    BuildSource::Dockerfile(
+                        directory.join(dockerfile).to_string_lossy().to_string(),
+                    )
+                } else if let Some(image) = config.image.clone() {
+                    BuildSource::Image(image)
+                } else {
+                    return Err(missing_field("build.dockerfile or image"));
+                };
 
                 Ok(Box::new(Docker {
                     build_args: config.build_args(),
-                    directory: directory.to_string_lossy().to_string(),
+                    build_source,
                     command: "docker".to_string(),
-                    file: directory.join(dockerfile).to_string_lossy().to_string(),
+                    directory: directory.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     override_command: config.override_command,
@@ -307,16 +313,20 @@ fn build_provider(
                     workspace_folder: config.workspace_folder.clone(),
                 }))
             } else {
-                let dockerfile = config
-                    .dockerfile()
-                    .ok_or_else(|| missing_field("build.dockerfile"))?;
-                let dockerfile = directory.join(".devcontainer").join(dockerfile);
+                let build_source = if let Some(dockerfile) = config.dockerfile() {
+                    let path = directory.join(".devcontainer").join(dockerfile);
+                    BuildSource::Dockerfile(path.to_string_lossy().to_string())
+                } else if let Some(image) = config.image.clone() {
+                    BuildSource::Image(image)
+                } else {
+                    return Err(missing_field("build.dockerfile or image"));
+                };
 
                 Ok(Box::new(Podman {
                     build_args: config.build_args(),
-                    directory: directory.to_string_lossy().to_string(),
+                    build_source,
                     command: "podman".to_string(),
-                    file: dockerfile.to_string_lossy().to_string(),
+                    directory: directory.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     run_args: config.run_args.clone(),

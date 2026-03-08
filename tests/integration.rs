@@ -12,7 +12,7 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use devcont::provider::Provider;
-use devcont::provider::docker::Docker;
+use devcont::provider::docker::{BuildSource, Docker};
 use devcont::provider::docker_compose::DockerCompose;
 use devcont::provider::podman::Podman;
 use devcont::provider::podman_compose::PodmanCompose;
@@ -237,12 +237,14 @@ fn start_fixture_container(fixture_name: &str, name: &str) -> (String, Container
 fn load_docker_provider(name: &str) -> Docker {
     Docker {
         build_args: std::collections::HashMap::new(),
+        build_source: BuildSource::Dockerfile(
+            fixture_path("basic")
+                .join("Dockerfile")
+                .to_string_lossy()
+                .into_owned(),
+        ),
         command: "docker".to_string(),
         directory: fixture_path("basic").to_string_lossy().into_owned(),
-        file: fixture_path("basic")
-            .join("Dockerfile")
-            .to_string_lossy()
-            .into_owned(),
         forward_ports: vec![],
         name: name.to_string(),
         run_args: vec![],
@@ -276,13 +278,15 @@ fn load_compose_provider(name: &str) -> DockerCompose {
 fn load_podman_provider(name: &str) -> Podman {
     Podman {
         build_args: std::collections::HashMap::new(),
+        build_source: BuildSource::Dockerfile(
+            fixture_path("basic")
+                .join(".devcontainer")
+                .join("Dockerfile")
+                .to_string_lossy()
+                .into_owned(),
+        ),
         command: "podman".to_string(),
         directory: fixture_path("basic").to_string_lossy().into_owned(),
-        file: fixture_path("basic")
-            .join(".devcontainer")
-            .join("Dockerfile")
-            .to_string_lossy()
-            .into_owned(),
         forward_ports: vec![],
         name: name.to_string(),
         run_args: vec![],

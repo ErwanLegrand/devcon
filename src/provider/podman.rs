@@ -5,15 +5,16 @@ use std::process::Command;
 
 use super::Provider;
 use super::print_command;
+use crate::provider::docker::BuildSource;
 
 const IMAGE_NAMESPACE: &str = "devcont";
 
 #[derive(Debug)]
 pub struct Podman {
     pub build_args: HashMap<String, String>,
+    pub build_source: BuildSource,
     pub command: String,
     pub directory: String,
-    pub file: String,
     pub forward_ports: Vec<u16>,
     pub name: String,
     pub run_args: Vec<String>,
@@ -24,33 +25,48 @@ pub struct Podman {
 
 impl Provider for Podman {
     fn build(&self, use_cache: bool) -> Result<bool> {
-        let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
+        match &self.build_source {
+            BuildSource::Dockerfile(path) => {
+                let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
 
-        let mut command = Command::new(&self.command);
-        command
-            .arg("build")
-            .arg("-t")
-            .arg(&tag)
-            .arg("-f")
-            .arg(&self.file);
+                let mut command = Command::new(&self.command);
+                command
+                    .arg("build")
+                    .arg("-t")
+                    .arg(&tag)
+                    .arg("-f")
+                    .arg(path);
 
-        if !use_cache {
-            command.arg("--no-cache");
+                if !use_cache {
+                    command.arg("--no-cache");
+                }
+
+                for (key, value) in &self.build_args {
+                    command.arg("--build-arg").arg(format!("{key}={value}"));
+                }
+
+                command.arg(&self.directory);
+
+                print_command(&command);
+
+                Ok(command.status()?.success())
+            }
+            BuildSource::Image(image) => {
+                let mut command = Command::new(&self.command);
+                command.arg("pull").arg(image);
+
+                print_command(&command);
+
+                Ok(command.status()?.success())
+            }
         }
-
-        for (key, value) in &self.build_args {
-            command.arg("--build-arg").arg(format!("{key}={value}"));
-        }
-
-        command.arg(&self.directory);
-
-        print_command(&command);
-
-        Ok(command.status()?.success())
     }
 
     fn create(&self, args: Vec<String>) -> Result<bool> {
-        let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
+        let image = match &self.build_source {
+            BuildSource::Dockerfile(_) => format!("{IMAGE_NAMESPACE}/{}", &self.name),
+            BuildSource::Image(name) => name.clone(),
+        };
 
         let mut command = Command::new(&self.command);
         command.arg("create");
@@ -90,7 +106,7 @@ impl Provider for Podman {
         command.arg(&self.user);
         command.arg("-w");
         command.arg(&self.workspace_folder);
-        command.arg(tag);
+        command.arg(image);
 
         if self.override_command {
             command

@@ -22,6 +22,7 @@ impl Default for ShutdownAction {
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     name: String,
+    pub image: Option<String>,
     pub build: Option<Build>,
     #[serde(default)]
     pub forward_ports: Vec<u16>,
@@ -168,6 +169,21 @@ mod tests {
         );
         // Ensure it's a ConfigParse variant, not an Io error
         assert!(matches!(result.unwrap_err(), Error::ConfigParse(_)));
+    }
+
+    #[test]
+    fn parse_image_field() {
+        let fixture = Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/devcontainer_image.json"
+        ));
+        let config = Config::parse(fixture).expect("image fixture should parse");
+        assert_eq!(
+            config.image,
+            Some("alpine".to_string()),
+            "image field should be 'alpine'"
+        );
+        assert!(config.build.is_none(), "build should be absent");
     }
 
     #[test]
