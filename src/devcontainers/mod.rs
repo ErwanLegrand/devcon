@@ -66,14 +66,29 @@ impl Devcontainer {
     pub fn run(&self, use_cache: bool) -> std::io::Result<()> {
         let provider = &self.provider;
 
+        if let Some(cmd) = self.config.initialize_command.clone() {
+            std::process::Command::new("sh")
+                .arg("-c")
+                .arg(&cmd)
+                .status()?;
+        }
+
         self.create(use_cache)?;
         if !provider.running()? {
             provider.start()?;
         }
 
+        if let Some(cmd) = self.config.post_start_command.clone() {
+            provider.exec(cmd)?;
+        }
+
         self.post_create()?;
         provider.restart()?;
         provider.attach()?;
+
+        if let Some(cmd) = self.config.post_attach_command.clone() {
+            provider.exec(cmd)?;
+        }
 
         if self.config.should_shutdown() {
             provider.stop()?;
