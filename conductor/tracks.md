@@ -6,13 +6,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## [x] Track: Foundation Modernization
 *Rename to `devcont`, Rust 2024 + MSRV 1.85, dependency upgrades, official rust dev container, rust-dev-template integration, CI quality gates.*
-*Link: [./tracks/foundation_modernization_20260227/](./tracks/foundation_modernization_20260227/)*
-
----
-
-## [x] Track: Code Inventory
-*Audit the codebase for code unnecessary to stated goals; document findings and decide on removal or refactoring.*
-*Link: [./tracks/code_inventory_20260228/](./tracks/code_inventory_20260228/)*
+*Link: [./archive/foundation_modernization_20260227/](./archive/foundation_modernization_20260227/)*
 
 ---
 
