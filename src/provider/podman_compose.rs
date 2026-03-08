@@ -180,8 +180,8 @@ impl Provider for PodmanCompose {
         let output = Command::new(&self.podman_command)
             .arg("ps")
             .arg("-q")
-            .arg("--format")
-            .arg("{{.ID}}")
+            .arg("--filter")
+            .arg("status=running")
             .arg("--filter")
             .arg(format!("label=io.podman.compose.project={}", &self.name))
             .output()?

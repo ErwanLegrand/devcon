@@ -2,11 +2,11 @@
 
 ## Phase 1: Bug Fixes
 
-- [ ] Task: Fix `PodmanCompose::running()` (FR-001)
-    - [ ] Remove `--format {{.ID}}` argument from `podman ps` call in `running()`
-    - [ ] Add `--filter` `status=running` to the `podman ps` call
-    - [ ] `cargo test --test integration` must pass
-    - [ ] Commit: `fix(provider): fix PodmanCompose::running() flag conflict`
+- [x] Task: Fix `PodmanCompose::running()` (FR-001)
+    - [x] Remove `--format {{.ID}}` argument from `podman ps` call in `running()`
+    - [x] Add `--filter` `status=running` to the `podman ps` call
+    - [x] `cargo test --test integration` must pass
+    - [x] Commit: `fix(provider): fix PodmanCompose::running() flag conflict`
 - [ ] Task: Fix `attach()` shell in both compose providers (FR-002)
     - [ ] Add `shell: String` field to `DockerCompose` struct in `docker_compose.rs`
     - [ ] Add `shell: String` field to `PodmanCompose` struct in `podman_compose.rs`
