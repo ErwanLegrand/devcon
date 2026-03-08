@@ -26,9 +26,12 @@ pub struct Config {
     pub build: Option<Build>,
     #[serde(default)]
     pub forward_ports: Vec<u16>,
+    pub initialize_command: Option<String>,
     pub on_create_command: Option<String>,
     pub update_content_command: Option<String>,
     pub post_create_command: Option<String>,
+    pub post_start_command: Option<String>,
+    pub post_attach_command: Option<String>,
     #[serde(default = "default_remote_user")]
     pub remote_user: String,
     #[serde(default)]
