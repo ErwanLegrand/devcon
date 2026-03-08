@@ -30,12 +30,7 @@ impl Provider for Podman {
                 let tag = format!("{IMAGE_NAMESPACE}/{}", &self.name);
 
                 let mut command = Command::new(&self.command);
-                command
-                    .arg("build")
-                    .arg("-t")
-                    .arg(&tag)
-                    .arg("-f")
-                    .arg(path);
+                command.arg("build").arg("-t").arg(&tag).arg("-f").arg(path);
 
                 if !use_cache {
                     command.arg("--no-cache");

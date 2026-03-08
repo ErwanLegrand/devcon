@@ -1,5 +1,5 @@
-use serde::de::{self, Deserializer, SeqAccess, Visitor};
 use serde::Deserialize;
+use serde::de::{self, Deserializer, SeqAccess, Visitor};
 use std::fmt;
 
 /// A lifecycle hook value that accepts either a plain string or an array of strings.
@@ -76,7 +76,10 @@ mod tests {
     fn deserialize_array_form() {
         let json = r#"["npm", "install"]"#;
         let v: OneOrMany = json5::from_str(json).expect("parse array form");
-        assert_eq!(v, OneOrMany::Many(vec!["npm".to_string(), "install".to_string()]));
+        assert_eq!(
+            v,
+            OneOrMany::Many(vec!["npm".to_string(), "install".to_string()])
+        );
     }
 
     #[test]
