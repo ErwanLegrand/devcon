@@ -2,19 +2,19 @@
 
 ## Phase 1: Audit and Findings Document
 
-- [ ] Task: Run static analysis
-    - [ ] Run `cargo clippy -W dead-code -W unreachable-code -- -D warnings` and
+- [x] Task: Run static analysis
+    - [x] Run `cargo clippy -W dead-code -W unreachable-code -- -D warnings` and
           record all new warnings
-    - [ ] List every `#[allow(dead_code)]` annotation in `src/` (grep output)
-    - [ ] Confirm `src/provider/utils.rs` is empty
-    - [ ] Check `DockerCompose` and `PodmanCompose` struct fields: run
+    - [x] List every `#[allow(dead_code)]` annotation in `src/` (grep output)
+    - [x] Confirm `src/provider/utils.rs` is empty
+    - [x] Check `DockerCompose` and `PodmanCompose` struct fields: run
           `cargo clippy` without their struct-level `#[allow(dead_code)]` to see
           which fields trigger warnings
-- [ ] Task: Write `findings.md`
-    - [ ] Create `conductor/tracks/code_inventory_20260228/findings.md`
-    - [ ] Document all 7 pre-identified items (Items 1–7 from spec) with
+- [x] Task: Write `findings.md`
+    - [x] Create `conductor/tracks/code_inventory_20260228/findings.md`
+    - [x] Document all 7 pre-identified items (Items 1–7 from spec) with
           location, description, and proposed decision
-    - [ ] Add any additional items discovered during static analysis
+    - [x] Add any additional items discovered during static analysis
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Audit and Findings Document' (Protocol in workflow.md)
 
 ## Phase 2: Implement Removals
