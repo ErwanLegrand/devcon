@@ -237,9 +237,14 @@ fn build_provider(
                     .as_deref()
                     .ok_or_else(|| missing_field("service"))?;
 
+                let mut env_vars: Vec<(String, String)> =
+                    config.remote_env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                env_vars.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+
                 Ok(Box::new(DockerCompose {
                     build_args: config.build_args(),
                     command: "docker".to_string(),
+                    env_vars,
                     file: compose_path.to_string_lossy().to_string(),
                     name: config.safe_name(),
                     service: service.to_string(),
@@ -279,9 +284,14 @@ fn build_provider(
                     .as_deref()
                     .ok_or_else(|| missing_field("service"))?;
 
+                let mut env_vars: Vec<(String, String)> =
+                    config.remote_env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                env_vars.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+
                 Ok(Box::new(PodmanCompose {
                     build_args: config.build_args(),
                     command: "podman-compose".to_string(),
+                    env_vars,
                     file: compose_path.to_string_lossy().to_string(),
                     name: config.safe_name(),
                     podman_command: "podman".to_string(),

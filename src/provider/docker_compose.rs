@@ -10,6 +10,7 @@ use super::utils::create_compose_override;
 pub struct DockerCompose {
     pub build_args: HashMap<String, String>,
     pub command: String,
+    pub env_vars: Vec<(String, String)>,
     pub file: String,
     pub name: String,
     pub service: String,
@@ -20,7 +21,7 @@ pub struct DockerCompose {
 
 impl DockerCompose {
     fn create_docker_compose(&self) -> Result<String> {
-        create_compose_override(&self.service)
+        create_compose_override(&self.service, &self.env_vars)
     }
 }
 

@@ -258,6 +258,7 @@ fn load_compose_provider(name: &str) -> DockerCompose {
     DockerCompose {
         build_args: std::collections::HashMap::new(),
         command: "docker".to_string(),
+        env_vars: vec![],
         file: fixture_path("compose")
             .join("docker-compose.yml")
             .to_string_lossy()
@@ -300,6 +301,7 @@ fn load_podman_compose_provider(name: &str) -> PodmanCompose {
     PodmanCompose {
         build_args: std::collections::HashMap::new(),
         command: "podman-compose".to_string(),
+        env_vars: vec![],
         podman_command: "podman".to_string(),
         file: compose_file,
         name: name.to_string(),

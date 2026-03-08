@@ -19,15 +19,19 @@ struct TemplateEntry {
 static TEMPLATE: &str = include_str!("../../templates/docker-compose.yml");
 
 /// Write a temporary docker-compose override file that forwards the SSH agent
-/// socket into the named `service` container, and return its path.
+/// socket into the named `service` container and injects any additional
+/// environment variables, returning the path to the written file.
 ///
 /// # Errors
 /// Returns an error if the template cannot be rendered or the file cannot be written.
-pub(crate) fn create_compose_override(service: &str) -> Result<String> {
+pub(crate) fn create_compose_override(service: &str, env_vars: &[(String, String)]) -> Result<String> {
     let dir = env::temp_dir();
     let file = dir.join("docker-compose.yml");
     let mut volumes = vec![];
-    let mut envs = vec![];
+    let mut envs: Vec<TemplateEntry> = env_vars
+        .iter()
+        .map(|(k, v)| TemplateEntry { source: k.clone(), dest: v.clone() })
+        .collect();
 
     if let Ok(ssh_auth_sock) = env::var("SSH_AUTH_SOCK") {
         volumes.push(TemplateEntry {
