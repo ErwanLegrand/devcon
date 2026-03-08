@@ -50,8 +50,9 @@ pub struct Config {
 #[serde(rename_all = "camelCase")]
 pub struct Build {
     pub dockerfile: Option<String>,
-    // Retained for devcontainer spec completeness; may be used in future features.
-    #[allow(dead_code)]
+    // Dev Containers spec §build.context — path from which docker build is run.
+    // Parsed from devcontainer.json but not yet wired into providers; tracked in
+    // conductor/tracks/code_inventory_20260228/findings.md (Item 3, Retain).
     pub context: Option<String>,
 
     #[serde(default)]
@@ -99,6 +100,11 @@ impl Config {
     }
 
     /// Return `true` if the container should be stopped after the session ends.
+    ///
+    /// Note: `StopCompose` and `StopContainer` are currently treated identically —
+    /// both stop the container/project on exit. The distinction (stop only the
+    /// service vs. full `compose down`) is not yet implemented; tracked in
+    /// conductor/tracks/code_inventory_20260228/findings.md (Item 4, Retain).
     #[must_use]
     pub fn should_shutdown(&self) -> bool {
         !matches!(self.shutdown_action, ShutdownAction::None)

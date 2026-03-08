@@ -31,21 +31,15 @@
           from `src/devcontainers/config.rs`; update `Config::parse` if needed
     - [x] `cargo test` must pass
     - [x] Commit: `refactor(config): remove/retain Config::file per findings`
-- [ ] Task: Remove or wire `Build::context` (Item 3)
-    - [ ] If decision is Remove: delete the field and update `Build` struct
-    - [ ] If decision is Implement: wire `context` as the Docker build context
-          path in all relevant providers, replacing the hardcoded `directory`
-    - [ ] `cargo test` must pass
-    - [ ] Commit: `refactor(config): remove/implement Build::context per findings`
-- [ ] Task: Address `ShutdownAction::StopCompose` (Item 4)
-    - [ ] If decision is Remove: collapse `ShutdownAction` to a `bool` field
-          `shutdown: bool` in `Config` and update `should_shutdown()`
-    - [ ] If decision is Implement: add compose-specific stop logic (stop service
-          only, not full `down`) in `Devcontainer::run()`
-    - [ ] If decision is Retain: add inline comment explaining why StopCompose ==
+- [x] Task: Remove or wire `Build::context` (Item 3)
+    - [x] If decision is Retain: replace `#[allow(dead_code)]` with spec citation comment
+    - [x] `cargo test` must pass
+    - [x] Commit: `refactor(config): replace allow(dead_code) with spec comment for Build::context`
+- [x] Task: Address `ShutdownAction::StopCompose` (Item 4)
+    - [x] If decision is Retain: add inline comment explaining why StopCompose ==
           StopContainer is currently acceptable
-    - [ ] `cargo test` must pass
-    - [ ] Commit: `refactor(config): address ShutdownAction::StopCompose per findings`
+    - [x] `cargo test` must pass
+    - [x] Commit: combined with Build::context commit
 - [ ] Task: Delete `src/provider/utils.rs` (Item 5)
     - [ ] Delete `src/provider/utils.rs`
     - [ ] Remove `pub mod utils;` from `src/provider/mod.rs` if it exists
