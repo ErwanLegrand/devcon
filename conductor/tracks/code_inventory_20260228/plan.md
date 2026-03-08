@@ -40,11 +40,11 @@
           StopContainer is currently acceptable
     - [x] `cargo test` must pass
     - [x] Commit: combined with Build::context commit
-- [ ] Task: Delete `src/provider/utils.rs` (Item 5)
-    - [ ] Delete `src/provider/utils.rs`
-    - [ ] Remove `pub mod utils;` from `src/provider/mod.rs` if it exists
-    - [ ] `cargo build` must pass
-    - [ ] Commit: `chore: delete empty provider/utils.rs`
+- [x] Task: Delete `src/provider/utils.rs` (Item 5)
+    - [x] Delete `src/provider/utils.rs`
+    - [x] Remove `pub mod utils;` from `src/provider/mod.rs` if it exists — not present
+    - [x] `cargo build` must pass
+    - [x] Commit: `chore: delete empty provider/utils.rs`
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Implement Removals' (Protocol in workflow.md)
 
 ## Phase 3: Implement Refactors
