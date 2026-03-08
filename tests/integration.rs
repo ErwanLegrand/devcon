@@ -258,14 +258,11 @@ fn load_compose_provider(name: &str) -> DockerCompose {
     DockerCompose {
         build_args: std::collections::HashMap::new(),
         command: "docker".to_string(),
-        directory: fixture_path("compose").to_string_lossy().into_owned(),
         file: fixture_path("compose")
             .join("docker-compose.yml")
             .to_string_lossy()
             .into_owned(),
         name: name.to_string(),
-        forward_ports: vec![],
-        run_args: vec![],
         service: "app".to_string(),
         user: "root".to_string(),
         // alpine does not have /workspace; use /tmp which always exists.
@@ -303,11 +300,8 @@ fn load_podman_compose_provider(name: &str) -> PodmanCompose {
         build_args: std::collections::HashMap::new(),
         command: "podman-compose".to_string(),
         podman_command: "podman".to_string(),
-        directory: fixture_path("compose").to_string_lossy().into_owned(),
         file: compose_file,
-        forward_ports: vec![],
         name: name.to_string(),
-        run_args: vec![],
         service: "app".to_string(),
         user: "root".to_string(),
         // alpine does not have /workspace; use /tmp which always exists.

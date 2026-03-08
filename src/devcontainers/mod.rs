@@ -239,12 +239,9 @@ fn build_provider(
 
                 Ok(Box::new(DockerCompose {
                     build_args: config.build_args(),
-                    directory: directory.to_string_lossy().to_string(),
                     command: "docker".to_string(),
                     file: compose_path.to_string_lossy().to_string(),
                     name: config.safe_name(),
-                    forward_ports: config.forward_ports.clone(),
-                    run_args: config.run_args.clone(),
                     service: service.to_string(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
@@ -283,13 +280,10 @@ fn build_provider(
 
                 Ok(Box::new(PodmanCompose {
                     build_args: config.build_args(),
-                    directory: directory.to_string_lossy().to_string(),
                     command: "podman-compose".to_string(),
                     file: compose_path.to_string_lossy().to_string(),
-                    forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
                     podman_command: "podman".to_string(),
-                    run_args: config.run_args.clone(),
                     service: service.to_string(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),

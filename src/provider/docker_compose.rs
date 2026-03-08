@@ -9,15 +9,11 @@ use super::Provider;
 use super::print_command;
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct DockerCompose {
     pub build_args: HashMap<String, String>,
     pub command: String,
-    pub directory: String,
     pub file: String,
     pub name: String,
-    pub forward_ports: Vec<u16>,
-    pub run_args: Vec<String>,
     pub service: String,
     pub user: String,
     pub workspace_folder: String,

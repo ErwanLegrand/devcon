@@ -9,16 +9,12 @@ use super::Provider;
 use super::print_command;
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct PodmanCompose {
     pub build_args: HashMap<String, String>,
     pub command: String,
     pub podman_command: String,
-    pub directory: String,
     pub file: String,
-    pub forward_ports: Vec<u16>,
     pub name: String,
-    pub run_args: Vec<String>,
     pub service: String,
     pub user: String,
     pub workspace_folder: String,

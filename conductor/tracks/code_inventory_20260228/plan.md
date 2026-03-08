@@ -45,23 +45,18 @@
     - [x] Remove `pub mod utils;` from `src/provider/mod.rs` if it exists — not present
     - [x] `cargo build` must pass
     - [x] Commit: `chore: delete empty provider/utils.rs`
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Implement Removals' (Protocol in workflow.md)
+- [ ] Task: Conductor - User Manual Verification 'Phase 2: Implement Removals (partial)' (Protocol in workflow.md)
 
 ## Phase 3: Implement Refactors
 
-- [ ] Task: Clean up unused compose struct fields (Item 6)
-    - [ ] Remove `#[allow(dead_code)]` from `DockerCompose` struct in
-          `src/provider/docker_compose.rs`
-    - [ ] Remove `#[allow(dead_code)]` from `PodmanCompose` struct in
-          `src/provider/podman_compose.rs`
-    - [ ] For each field that now produces a dead_code warning: either remove
-          the field (and update `build_provider` in `src/devcontainers/mod.rs`)
-          or implement it
-    - [ ] Fields to check: `directory`, `forward_ports`, `run_args` on both
-          structs
-    - [ ] Update tests in `tests/integration.rs` if struct initializers change
-    - [ ] `cargo test --test integration` must pass
-    - [ ] Commit: `refactor(provider): remove unused compose struct fields`
+- [x] Task: Clean up unused compose struct fields (Item 6)
+    - [x] Remove `#[allow(dead_code)]` from `DockerCompose` struct
+    - [x] Remove `#[allow(dead_code)]` from `PodmanCompose` struct
+    - [x] Remove `directory`, `forward_ports`, `run_args` from both structs
+    - [x] Update `build_provider` in `src/devcontainers/mod.rs`
+    - [x] Update struct initializers in `tests/integration.rs`
+    - [x] `cargo test --test integration` must pass
+    - [x] Commit: `refactor(provider): remove unused compose struct fields`
 - [ ] Task: Consolidate `create_docker_compose()` duplication (Item 7)
     - [ ] Extract the shared logic into a free function
           `create_compose_override(service: &str) -> std::io::Result<String>` in
