@@ -24,13 +24,19 @@ static TEMPLATE: &str = include_str!("../../templates/docker-compose.yml");
 ///
 /// # Errors
 /// Returns an error if the template cannot be rendered or the file cannot be written.
-pub(crate) fn create_compose_override(service: &str, env_vars: &[(String, String)]) -> Result<String> {
+pub(crate) fn create_compose_override(
+    service: &str,
+    env_vars: &[(String, String)],
+) -> Result<String> {
     let dir = env::temp_dir();
     let file = dir.join("docker-compose.yml");
     let mut volumes = vec![];
     let mut envs: Vec<TemplateEntry> = env_vars
         .iter()
-        .map(|(k, v)| TemplateEntry { source: k.clone(), dest: v.clone() })
+        .map(|(k, v)| TemplateEntry {
+            source: k.clone(),
+            dest: v.clone(),
+        })
         .collect();
 
     if let Ok(ssh_auth_sock) = env::var("SSH_AUTH_SOCK") {

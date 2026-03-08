@@ -211,7 +211,12 @@ impl Provider for PodmanCompose {
             .stdout;
 
         let raw = String::from_utf8(output).unwrap_or_default();
-        let container_id = raw.lines().find(|l| !l.trim().is_empty()).unwrap_or("").trim().to_string();
+        let container_id = raw
+            .lines()
+            .find(|l| !l.trim().is_empty())
+            .unwrap_or("")
+            .trim()
+            .to_string();
 
         if container_id.is_empty() {
             return Ok(false);

@@ -237,8 +237,11 @@ fn build_provider(
                     .as_deref()
                     .ok_or_else(|| missing_field("service"))?;
 
-                let mut env_vars: Vec<(String, String)> =
-                    config.remote_env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                let mut env_vars: Vec<(String, String)> = config
+                    .remote_env
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
                 env_vars.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
                 Ok(Box::new(DockerCompose {
@@ -284,8 +287,11 @@ fn build_provider(
                     .as_deref()
                     .ok_or_else(|| missing_field("service"))?;
 
-                let mut env_vars: Vec<(String, String)> =
-                    config.remote_env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                let mut env_vars: Vec<(String, String)> = config
+                    .remote_env
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
                 env_vars.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
                 Ok(Box::new(PodmanCompose {
