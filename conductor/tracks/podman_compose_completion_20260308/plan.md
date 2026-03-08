@@ -15,16 +15,15 @@
     - [x] Update `load_compose_provider` and `load_podman_compose_provider` in `tests/integration.rs`
     - [x] `cargo test --test integration` must pass
     - [x] Commit: `fix(provider): replace hardcoded zsh with configurable shell in compose attach`
-- [ ] Task: Fix `PodmanCompose::cp()` container ID resolution (FR-003)
-    - [ ] Change `podman ps` output processing to take only the first non-empty
-          line (`.lines().find(|l| !l.trim().is_empty())`)
-    - [ ] Return `Ok(false)` when no matching container ID is found
-    - [ ] `cargo test --test integration` must pass
-    - [ ] Commit: `fix(provider): fix PodmanCompose::cp() for scaled services`
-- [ ] Task: Remove `--rmi all` from `PodmanCompose::rm()` (FR-005)
-    - [ ] Delete the `--rmi` and `all` args from the `podman-compose down` invocation
-    - [ ] `cargo test --test integration` must pass
-    - [ ] Commit: `fix(provider): remove --rmi all from PodmanCompose::rm()`
+- [x] Task: Fix `PodmanCompose::cp()` container ID resolution (FR-003)
+    - [x] Take only first non-empty line from `podman ps` output
+    - [x] Return `Ok(false)` when no matching container ID is found
+    - [x] `cargo test --test integration` must pass
+    - [x] Commit: `fix(provider): fix PodmanCompose::cp() for scaled services`
+- [x] Task: Remove `--rmi all` from `PodmanCompose::rm()` (FR-005)
+    - [x] Delete the `--rmi` and `all` args from the `podman-compose down` invocation
+    - [x] `cargo test --test integration` must pass
+    - [x] Commit: `fix(provider): remove --rmi all from PodmanCompose::rm()`
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Bug Fixes' (Protocol in workflow.md)
 
 ## Phase 2: remote_env Injection via Compose Override (FR-004)

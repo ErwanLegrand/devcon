@@ -147,9 +147,7 @@ impl Provider for PodmanCompose {
             .arg("-p")
             .arg(&self.name)
             .arg("down")
-            .arg("--remove-orphans")
-            .arg("--rmi")
-            .arg("all");
+            .arg("--remove-orphans");
 
         print_command(&command);
 
@@ -211,10 +209,8 @@ impl Provider for PodmanCompose {
             .output()?
             .stdout;
 
-        let container_id = String::from_utf8(output)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
+        let raw = String::from_utf8(output).unwrap_or_default();
+        let container_id = raw.lines().find(|l| !l.trim().is_empty()).unwrap_or("").trim().to_string();
 
         if container_id.is_empty() {
             return Ok(false);
