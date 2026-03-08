@@ -15,17 +15,17 @@
     - [x] Document all 7 pre-identified items (Items 1–7 from spec) with
           location, description, and proposed decision
     - [x] Add any additional items discovered during static analysis
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Audit and Findings Document' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Audit and Findings Document' (Protocol in workflow.md)
 
 ## Phase 2: Implement Removals
 
-- [ ] Task: Remove `Error::Provider` (Item 1)
-    - [ ] Delete the `Provider(String)` variant and its `#[allow(dead_code)]` from
+- [x] Task: Remove `Error::Provider` (Item 1)
+    - [x] Delete the `Provider(String)` variant and its `#[allow(dead_code)]` from
           `src/error.rs`
-    - [ ] Remove the `SettingsLoad` variant too if it is also unused
-          (verify first)
-    - [ ] `cargo test` must pass
-    - [ ] Commit: `refactor(error): remove unused Provider error variant`
+    - [x] Remove the `SettingsLoad` variant too if it is also unused
+          (verify first) — SettingsLoad IS used in settings.rs:61, retained
+    - [x] `cargo test` must pass
+    - [x] Commit: `refactor(error): remove unused Provider error variant`
 - [ ] Task: Remove or wire `Config::file` (Item 2)
     - [ ] If decision is Remove: delete the field and its `#[allow(dead_code)]`
           from `src/devcontainers/config.rs`; update `Config::parse` if needed

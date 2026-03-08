@@ -12,9 +12,6 @@ pub enum Error {
     #[error("Failed to load settings: {0}")]
     SettingsLoad(String),
 
-    #[error("Provider error: {0}")]
-    #[allow(dead_code)]
-    Provider(String),
 }
 
 /// Convenience alias for `std::result::Result<T, Error>`.
