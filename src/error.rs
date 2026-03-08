@@ -11,7 +11,6 @@ pub enum Error {
 
     #[error("Failed to load settings: {0}")]
     SettingsLoad(String),
-
 }
 
 /// Convenience alias for `std::result::Result<T, Error>`.

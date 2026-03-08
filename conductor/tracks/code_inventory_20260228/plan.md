@@ -45,7 +45,7 @@
     - [x] Remove `pub mod utils;` from `src/provider/mod.rs` if it exists — not present
     - [x] `cargo build` must pass
     - [x] Commit: `chore: delete empty provider/utils.rs`
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Implement Removals (partial)' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Implement Removals (partial)' (Protocol in workflow.md)
 
 ## Phase 3: Implement Refactors
 
@@ -57,15 +57,13 @@
     - [x] Update struct initializers in `tests/integration.rs`
     - [x] `cargo test --test integration` must pass
     - [x] Commit: `refactor(provider): remove unused compose struct fields`
-- [ ] Task: Consolidate `create_docker_compose()` duplication (Item 7)
-    - [ ] Extract the shared logic into a free function
-          `create_compose_override(service: &str) -> std::io::Result<String>` in
-          `src/provider/utils.rs` (re-create the file with actual content) or a
-          new `src/provider/compose_utils.rs`
-    - [ ] Replace both `DockerCompose::create_docker_compose()` and
+- [x] Task: Consolidate `create_docker_compose()` duplication (Item 7)
+    - [x] Extract shared logic into `create_compose_override(service: &str)` in
+          `src/provider/utils.rs`
+    - [x] Replace both `DockerCompose::create_docker_compose()` and
           `PodmanCompose::create_docker_compose()` with calls to the shared function
-    - [ ] `cargo test --test integration` must pass
-    - [ ] Commit: `refactor(provider): extract shared create_compose_override helper`
+    - [x] `cargo test --test integration` must pass
+    - [x] Commit: `refactor(provider): extract shared create_compose_override helper`
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Implement Refactors' (Protocol in workflow.md)
 
 ## Phase 4: Quality Gate

@@ -2,6 +2,7 @@ pub mod docker;
 pub mod docker_compose;
 pub mod podman;
 pub mod podman_compose;
+pub mod utils;
 
 use colored::Colorize;
 use std::io::Result;

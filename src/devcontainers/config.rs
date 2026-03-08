@@ -104,7 +104,7 @@ impl Config {
     /// Note: `StopCompose` and `StopContainer` are currently treated identically —
     /// both stop the container/project on exit. The distinction (stop only the
     /// service vs. full `compose down`) is not yet implemented; tracked in
-    /// conductor/tracks/code_inventory_20260228/findings.md (Item 4, Retain).
+    /// `conductor/tracks/code_inventory_20260228/findings.md` (Item 4, Retain).
     #[must_use]
     pub fn should_shutdown(&self) -> bool {
         !matches!(self.shutdown_action, ShutdownAction::None)
