@@ -64,16 +64,15 @@
           `PodmanCompose::create_docker_compose()` with calls to the shared function
     - [x] `cargo test --test integration` must pass
     - [x] Commit: `refactor(provider): extract shared create_compose_override helper`
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Implement Refactors' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Implement Refactors' (Protocol in workflow.md)
 
 ## Phase 4: Quality Gate
 
-- [ ] Task: Run full quality gate
-    - [ ] `cargo test` (unit tests) ✓
-    - [ ] `cargo test --test integration` ✓
-    - [ ] `cargo clippy --all-targets -- -D warnings` ✓ (no suppressed items
-          without findings.md justification)
-    - [ ] `cargo fmt --check` ✓
-    - [ ] `cargo deny check licenses bans advisories` ✓
-    - [ ] Verify no `#[allow(dead_code)]` remains without a findings justification
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Quality Gate' (Protocol in workflow.md)
+- [x] Task: Run full quality gate
+    - [x] `cargo test` (unit tests) ✓
+    - [x] `cargo test --test integration` ✓
+    - [x] `cargo clippy --all-targets -- -D warnings` ✓
+    - [x] `cargo fmt --check` ✓
+    - [x] `cargo deny check licenses bans advisories` ✓
+    - [x] No `#[allow(dead_code)]` remains in src/ ✓
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Quality Gate' (Protocol in workflow.md)
