@@ -24,6 +24,37 @@ impl PodmanCompose {
     fn create_docker_compose(&self) -> Result<String> {
         create_compose_override(&self.service, &self.env_vars)
     }
+
+    fn extract_container_id(output: &str) -> &str {
+        output
+            .lines()
+            .find(|l| !l.trim().is_empty())
+            .map_or("", str::trim)
+    }
+
+    fn running_args(&self) -> Vec<String> {
+        vec![
+            "ps".to_string(),
+            "-q".to_string(),
+            "--filter".to_string(),
+            "status=running".to_string(),
+            "--filter".to_string(),
+            format!("label=io.podman.compose.project={}", &self.name),
+        ]
+    }
+
+    fn rm_args(&self, override_file: &str) -> Vec<String> {
+        vec![
+            "-f".to_string(),
+            self.file.clone(),
+            "-f".to_string(),
+            override_file.to_string(),
+            "-p".to_string(),
+            self.name.clone(),
+            "down".to_string(),
+            "--remove-orphans".to_string(),
+        ]
+    }
 }
 
 impl Provider for PodmanCompose {
@@ -140,15 +171,7 @@ impl Provider for PodmanCompose {
         let docker_override = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
-        command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&docker_override)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("down")
-            .arg("--remove-orphans");
+        command.args(self.rm_args(&docker_override));
 
         print_command(&command);
 
@@ -178,12 +201,7 @@ impl Provider for PodmanCompose {
 
     fn running(&self) -> Result<bool> {
         let output = Command::new(&self.podman_command)
-            .arg("ps")
-            .arg("-q")
-            .arg("--filter")
-            .arg("status=running")
-            .arg("--filter")
-            .arg(format!("label=io.podman.compose.project={}", &self.name))
+            .args(self.running_args())
             .output()?
             .stdout;
 
@@ -211,12 +229,7 @@ impl Provider for PodmanCompose {
             .stdout;
 
         let raw = String::from_utf8(output).unwrap_or_default();
-        let container_id = raw
-            .lines()
-            .find(|l| !l.trim().is_empty())
-            .unwrap_or("")
-            .trim()
-            .to_string();
+        let container_id = Self::extract_container_id(&raw).to_string();
 
         if container_id.is_empty() {
             return Ok(false);
@@ -282,5 +295,114 @@ impl Provider for PodmanCompose {
         print_command(&command);
 
         Ok(command.status()?.success())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_provider(name: &str, service: &str) -> PodmanCompose {
+        PodmanCompose {
+            build_args: HashMap::new(),
+            command: "podman-compose".to_string(),
+            env_vars: vec![],
+            podman_command: "podman".to_string(),
+            file: "docker-compose.yml".to_string(),
+            name: name.to_string(),
+            service: service.to_string(),
+            shell: "/bin/bash".to_string(),
+            user: "vscode".to_string(),
+            workspace_folder: "/workspace".to_string(),
+        }
+    }
+
+    // --- extract_container_id ---
+
+    #[test]
+    fn extract_container_id_single_line() {
+        let output = "abc123\n";
+        assert_eq!(PodmanCompose::extract_container_id(output), "abc123");
+    }
+
+    #[test]
+    fn extract_container_id_blank_leading_lines() {
+        let output = "\n\n  \ndeadbeef\n";
+        assert_eq!(PodmanCompose::extract_container_id(output), "deadbeef");
+    }
+
+    #[test]
+    fn extract_container_id_empty() {
+        assert_eq!(PodmanCompose::extract_container_id(""), "");
+        assert_eq!(PodmanCompose::extract_container_id("   \n  \n"), "");
+    }
+
+    // --- running_args ---
+
+    #[test]
+    fn running_args_includes_status_running_filter() {
+        let p = make_provider("myproject", "app");
+        let args = p.running_args();
+        // Must contain --filter status=running
+        let status_idx = args
+            .iter()
+            .position(|a| a == "--filter")
+            .expect("--filter missing");
+        assert_eq!(args[status_idx + 1], "status=running");
+    }
+
+    #[test]
+    fn running_args_does_not_include_format_flag() {
+        let p = make_provider("myproject", "app");
+        let args = p.running_args();
+        assert!(
+            !args.iter().any(|a| a.contains("--format")),
+            "running_args must not contain --format, got: {args:?}"
+        );
+    }
+
+    #[test]
+    fn running_args_includes_project_label_filter() {
+        let p = make_provider("testproj", "svc");
+        let args = p.running_args();
+        assert!(
+            args.iter()
+                .any(|a| a.contains("io.podman.compose.project=testproj")),
+            "running_args must filter by project label, got: {args:?}"
+        );
+    }
+
+    // --- rm_args ---
+
+    #[test]
+    fn rm_args_does_not_include_rmi() {
+        let p = make_provider("myproject", "app");
+        let args = p.rm_args("/tmp/override.yml");
+        assert!(
+            !args.iter().any(|a| a.contains("--rmi")),
+            "rm_args must not contain --rmi, got: {args:?}"
+        );
+    }
+
+    #[test]
+    fn rm_args_includes_down_and_remove_orphans() {
+        let p = make_provider("myproject", "app");
+        let args = p.rm_args("/tmp/override.yml");
+        assert!(
+            args.iter().any(|a| a == "down"),
+            "rm_args must include 'down'"
+        );
+        assert!(
+            args.iter().any(|a| a == "--remove-orphans"),
+            "rm_args must include '--remove-orphans'"
+        );
+    }
+
+    #[test]
+    fn rm_args_includes_project_name() {
+        let p = make_provider("projname", "app");
+        let args = p.rm_args("/override.yml");
+        let p_idx = args.iter().position(|a| a == "-p").expect("-p missing");
+        assert_eq!(args[p_idx + 1], "projname");
     }
 }
