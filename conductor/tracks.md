@@ -63,6 +63,41 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+## [ ] Track: Architecture Review & STRIDE Threat Modelling
+*Structured architecture review of module boundaries, Provider trait design, config pipeline, error propagation, and lifecycle hook semantics. STRIDE threat model applied to all external input surfaces (devcontainer.json, SSH socket, DooD, temp files, hooks).*
+*Priority: High.*
+*Link: [./tracks/arch_review_stride_20260309/](./tracks/arch_review_stride_20260309/)*
+
+---
+
+## [ ] Track: Thorough Code Review
+*File-by-file review of all `src/` files covering correctness, safety, idiomatic Rust, maintainability, and API design. Produces a severity-rated findings report and follow-up track stubs.*
+*Priority: High.*
+*Link: [./tracks/code_review_thorough_20260309/](./tracks/code_review_thorough_20260309/)*
+
+---
+
+## [ ] Track: Test Coverage Assessment
+*Measure baseline line/branch coverage with cargo-llvm-cov, identify gaps below 80%, classify by risk and feasibility, and produce a prioritised plan for closing the most important coverage holes.*
+*Priority: Medium.*
+*Link: [./tracks/test_coverage_assessment_20260309/](./tracks/test_coverage_assessment_20260309/)*
+
+---
+
+## [ ] Track: Fuzzing Feasibility Assessment
+*Evaluate whether cargo-fuzz (libFuzzer) is worthwhile for devcont. Assess candidate targets (config parsing, OneOrMany, compose override, hook dispatch), rate by ROI, and produce a Go/No-Go recommendation with implementation plan.*
+*Priority: Medium.*
+*Link: [./tracks/fuzzing_assessment_20260309/](./tracks/fuzzing_assessment_20260309/)*
+
+---
+
+## [ ] Track: Documentation Assessment & README Overhaul
+*Assess README.md and inline doc coverage. README should be concise, actionable, and link to the upstream project. Identify and fill doc-comment gaps on public API items.*
+*Priority: Medium.*
+*Link: [./tracks/documentation_assessment_20260309/](./tracks/documentation_assessment_20260309/)*
+
+---
+
 ## Future Tracks (not yet planned)
 
 - Architecture improvements (provider abstraction, error handling patterns, module structure)
