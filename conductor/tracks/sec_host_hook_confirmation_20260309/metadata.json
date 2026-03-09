@@ -1,0 +1,7 @@
+{
+  "id": "sec_host_hook_confirmation_20260309",
+  "title": "Security: Require User Confirmation Before Running initializeCommand on Host",
+  "status": "planned",
+  "priority": "high",
+  "created": "2026-03-09"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "fix_safe_name_validation_20260309",
+  "title": "Fix: safe_name() Silently Truncates Unicode — Validate Output",
+  "status": "planned",
+  "priority": "low",
+  "created": "2026-03-09"
+}

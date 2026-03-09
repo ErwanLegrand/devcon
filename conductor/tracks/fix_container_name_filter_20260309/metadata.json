@@ -1,0 +1,7 @@
+{
+  "id": "fix_container_name_filter_20260309",
+  "title": "Fix: Container Name Filter in exists() and running() is Too Broad",
+  "status": "planned",
+  "priority": "high",
+  "created": "2026-03-09"
+}

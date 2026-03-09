@@ -1,0 +1,7 @@
+{
+  "id": "sec_runargs_allowlist_20260309",
+  "title": "Security: Validate runArgs Against Allowlist",
+  "status": "planned",
+  "priority": "critical",
+  "created": "2026-03-09"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "sec_tempfile_secret_20260309",
+  "title": "Security: Fix Compose Override Temp File Permissions and Cleanup",
+  "status": "planned",
+  "priority": "critical",
+  "created": "2026-03-09"
+}

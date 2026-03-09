@@ -1,0 +1,7 @@
+{
+  "id": "fix_dockerfile_path_asymmetry_20260309",
+  "title": "Fix: Dockerfile Path Resolution Asymmetry Between Docker and Podman",
+  "status": "planned",
+  "priority": "high",
+  "created": "2026-03-09"
+}

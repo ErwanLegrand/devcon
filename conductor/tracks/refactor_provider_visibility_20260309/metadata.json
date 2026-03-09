@@ -1,0 +1,7 @@
+{
+  "id": "refactor_provider_visibility_20260309",
+  "title": "Refactor: Tighten Provider Module Visibility — pub(crate) Throughout",
+  "status": "planned",
+  "priority": "low",
+  "created": "2026-03-09"
+}

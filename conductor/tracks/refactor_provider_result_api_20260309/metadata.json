@@ -1,0 +1,7 @@
+{
+  "id": "refactor_provider_result_api_20260309",
+  "title": "Refactor: Provider Trait Methods Return Result<()> Not Result<bool>",
+  "status": "planned",
+  "priority": "medium",
+  "created": "2026-03-09"
+}

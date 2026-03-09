@@ -1,0 +1,7 @@
+{
+  "id": "sec_path_traversal_20260309",
+  "title": "Security: Prevent Path Traversal in Workspace and Dockerfile Paths",
+  "status": "planned",
+  "priority": "critical",
+  "created": "2026-03-09"
+}

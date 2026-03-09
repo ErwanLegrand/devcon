@@ -1,0 +1,7 @@
+{
+  "id": "fix_docker_compose_exists_20260309",
+  "title": "Fix: DockerCompose exists() Uses Wrong Container Name Source",
+  "status": "planned",
+  "priority": "high",
+  "created": "2026-03-09"
+}

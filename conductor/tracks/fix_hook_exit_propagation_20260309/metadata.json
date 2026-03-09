@@ -1,0 +1,7 @@
+{
+  "id": "fix_hook_exit_propagation_20260309",
+  "title": "Fix: Propagate Non-Zero Exit From In-Container Lifecycle Hooks",
+  "status": "planned",
+  "priority": "high",
+  "created": "2026-03-09"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "fix_settings_error_handling_20260309",
+  "title": "Fix: Settings Load Silently Falls Back on Any Error",
+  "status": "planned",
+  "priority": "low",
+  "created": "2026-03-09"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "feature_hook_timeout_20260309",
+  "title": "Feature: Configurable Timeout for Lifecycle Hooks",
+  "status": "planned",
+  "priority": "medium",
+  "created": "2026-03-09"
+}

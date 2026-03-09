@@ -1,0 +1,7 @@
+{
+  "id": "sec_default_user_20260309",
+  "title": "Security: Warn When Container Runs as Root With No remoteUser Configured",
+  "status": "planned",
+  "priority": "high",
+  "created": "2026-03-09"
+}

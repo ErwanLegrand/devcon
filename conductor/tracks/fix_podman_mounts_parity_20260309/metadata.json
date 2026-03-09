@@ -1,0 +1,7 @@
+{
+  "id": "fix_podman_mounts_parity_20260309",
+  "title": "Fix: Podman Providers Missing mounts and remoteEnv Support",
+  "status": "planned",
+  "priority": "medium",
+  "created": "2026-03-09"
+}
