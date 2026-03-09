@@ -387,3 +387,114 @@ fn build_provider(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    struct MockProvider {
+        exec_calls: RefCell<Vec<String>>,
+        exec_raw_calls: RefCell<Vec<(String, Vec<String>)>>,
+    }
+
+    impl MockProvider {
+        fn new() -> Self {
+            Self {
+                exec_calls: RefCell::new(vec![]),
+                exec_raw_calls: RefCell::new(vec![]),
+            }
+        }
+    }
+
+    impl Provider for MockProvider {
+        fn build(&self, _: bool) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn create(&self, _: Vec<String>) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn start(&self) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn stop(&self) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn restart(&self) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn attach(&self) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn rm(&self) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn exists(&self) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn running(&self) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn cp(&self, _: String, _: String) -> std::io::Result<bool> {
+            Ok(true)
+        }
+        fn exec(&self, cmd: String) -> std::io::Result<bool> {
+            self.exec_calls.borrow_mut().push(cmd);
+            Ok(true)
+        }
+        fn exec_raw(&self, prog: &str, args: &[&str]) -> std::io::Result<bool> {
+            self.exec_raw_calls.borrow_mut().push((
+                prog.to_string(),
+                args.iter().map(|s| (*s).to_string()).collect(),
+            ));
+            Ok(true)
+        }
+    }
+
+    #[test]
+    fn exec_hook_one_uses_exec() {
+        let provider = MockProvider::new();
+        let hook = OneOrMany::One("echo hello".to_string());
+        exec_hook(&provider, &hook).unwrap();
+        assert_eq!(*provider.exec_calls.borrow(), vec!["echo hello"]);
+        assert!(provider.exec_raw_calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn exec_hook_many_uses_exec_raw_not_exec() {
+        let provider = MockProvider::new();
+        let hook = OneOrMany::Many(vec!["npm".to_string(), "install".to_string()]);
+        exec_hook(&provider, &hook).unwrap();
+        assert!(provider.exec_calls.borrow().is_empty());
+        let raw_calls = provider.exec_raw_calls.borrow();
+        assert_eq!(raw_calls.len(), 1);
+        assert_eq!(raw_calls[0].0, "npm");
+        assert_eq!(raw_calls[0].1, vec!["install"]);
+    }
+
+    #[test]
+    fn exec_hook_many_preserves_args_with_spaces() {
+        let provider = MockProvider::new();
+        let hook = OneOrMany::Many(vec![
+            "echo".to_string(),
+            "hello world".to_string(),
+            "foo bar".to_string(),
+        ]);
+        exec_hook(&provider, &hook).unwrap();
+        assert!(provider.exec_calls.borrow().is_empty());
+        let raw_calls = provider.exec_raw_calls.borrow();
+        assert_eq!(raw_calls.len(), 1);
+        assert_eq!(raw_calls[0].0, "echo");
+        assert_eq!(raw_calls[0].1, vec!["hello world", "foo bar"]);
+    }
+
+    #[test]
+    fn exec_hook_many_empty_returns_true() {
+        let provider = MockProvider::new();
+        let hook = OneOrMany::Many(vec![]);
+        let result = exec_hook(&provider, &hook).unwrap();
+        assert!(result);
+        assert!(provider.exec_calls.borrow().is_empty());
+        assert!(provider.exec_raw_calls.borrow().is_empty());
+    }
+}
