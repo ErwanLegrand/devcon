@@ -28,11 +28,15 @@ fn exec_hook(provider: &dyn Provider, hook: &OneOrMany) -> std::io::Result<bool>
 ///
 /// - `One(cmd)` → `sh -c <cmd>`
 /// - `Many(parts)` → `parts[0] parts[1..]` (no shell, injection-safe)
-fn exec_host_hook(hook: &OneOrMany) -> std::io::Result<()> {
+///
+/// Returns `true` if the command ran and exited successfully, `false` on non-zero exit.
+/// Returns `Ok(true)` when no exec parts are produced (empty Many).
+fn exec_host_hook(hook: &OneOrMany) -> std::io::Result<bool> {
     if let Some((prog, args)) = hook.to_exec_parts() {
-        std::process::Command::new(&prog).args(&args).status()?;
+        let status = std::process::Command::new(&prog).args(&args).status()?;
+        return Ok(status.success());
     }
-    Ok(())
+    Ok(true)
 }
 
 /// A loaded and configured dev container instance.
@@ -91,7 +95,12 @@ impl Devcontainer {
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.initialize_command {
-            exec_host_hook(hook)?;
+            if !exec_host_hook(hook)? {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "initializeCommand failed",
+                ));
+            }
         }
 
         self.create(use_cache)?;
