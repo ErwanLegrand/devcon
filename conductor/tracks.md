@@ -42,24 +42,24 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Provider exec_raw — Injection-Safe Direct Exec for Many Hooks
+## [x] Track: Provider exec_raw — Injection-Safe Direct Exec for Many Hooks
 *Add `exec_raw(&self, prog, args)` to the `Provider` trait and all four implementations so that `OneOrMany::Many` hooks execute without a shell wrapper.*
 *Priority: Medium. Originated from review of spec_compliance_phase1.*
-*Link: [./tracks/provider_exec_raw_20260309/](./tracks/provider_exec_raw_20260309/)*
+*Link: [./archive/provider_exec_raw_20260309/](./archive/provider_exec_raw_20260309/)*
 
 ---
 
-## [ ] Track: PodmanCompose Unit Tests — running(), cp(), rm() Bug Fix Coverage
+## [x] Track: PodmanCompose Unit Tests — running(), cp(), rm() Bug Fix Coverage
 *Add targeted unit tests for the three PodmanCompose bug fixes from podman-compose Provider Completion.*
 *Priority: Low. Originated from review of podman_compose_completion.*
-*Link: [./tracks/podman_compose_unit_tests_20260309/](./tracks/podman_compose_unit_tests_20260309/)*
+*Link: [./archive/podman_compose_unit_tests_20260309/](./archive/podman_compose_unit_tests_20260309/)*
 
 ---
 
-## [ ] Track: build_source_for Refactor — Replace bool Parameter with Explicit Helpers
+## [x] Track: build_source_for Refactor — Replace bool Parameter with Explicit Helpers
 *Replace the opaque `in_devcontainer: bool` parameter with two dedicated `docker_build_source` / `podman_build_source` helpers.*
 *Priority: Low. Originated from review of spec_compliance_phase1.*
-*Link: [./tracks/build_source_refactor_20260309/](./tracks/build_source_refactor_20260309/)*
+*Link: [./archive/build_source_refactor_20260309/](./archive/build_source_refactor_20260309/)*
 
 ---
 
