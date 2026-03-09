@@ -300,17 +300,20 @@ fn compose_path_and_service(
     ))
 }
 
-fn build_source_for(
-    directory: &Path,
-    config: &Config,
-    in_devcontainer: bool,
-) -> std::io::Result<BuildSource> {
+fn docker_build_source(directory: &Path, config: &Config) -> std::io::Result<BuildSource> {
     if let Some(dockerfile) = config.dockerfile() {
-        let path = if in_devcontainer {
-            directory.join(".devcontainer").join(dockerfile)
-        } else {
-            directory.join(dockerfile)
-        };
+        let path = directory.join(dockerfile);
+        Ok(BuildSource::Dockerfile(path.to_string_lossy().to_string()))
+    } else if let Some(image) = config.image.clone() {
+        Ok(BuildSource::Image(image))
+    } else {
+        Err(missing_field("build.dockerfile or image"))
+    }
+}
+
+fn podman_build_source(directory: &Path, config: &Config) -> std::io::Result<BuildSource> {
+    if let Some(dockerfile) = config.dockerfile() {
+        let path = directory.join(".devcontainer").join(dockerfile);
         Ok(BuildSource::Dockerfile(path.to_string_lossy().to_string()))
     } else if let Some(image) = config.image.clone() {
         Ok(BuildSource::Image(image))
@@ -342,7 +345,7 @@ fn build_provider(
             } else {
                 Ok(Box::new(Docker {
                     build_args: config.build_args(),
-                    build_source: build_source_for(directory, config, false)?,
+                    build_source: docker_build_source(directory, config)?,
                     command: "docker".to_string(),
                     directory: directory.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
@@ -373,7 +376,7 @@ fn build_provider(
             } else {
                 Ok(Box::new(Podman {
                     build_args: config.build_args(),
-                    build_source: build_source_for(directory, config, true)?,
+                    build_source: podman_build_source(directory, config)?,
                     command: "podman".to_string(),
                     directory: directory.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
