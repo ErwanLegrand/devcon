@@ -223,4 +223,21 @@ impl Provider for Podman {
 
         Ok(command.status()?.success())
     }
+
+    fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool> {
+        let mut command = Command::new(&self.command);
+        command
+            .arg("exec")
+            .arg("-u")
+            .arg(&self.user)
+            .arg("-w")
+            .arg(&self.workspace_folder)
+            .arg(&self.name)
+            .arg(prog)
+            .args(args);
+
+        print_command(&command);
+
+        Ok(command.status()?.success())
+    }
 }

@@ -243,4 +243,29 @@ impl Provider for DockerCompose {
 
         Ok(command.status()?.success())
     }
+
+    fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool> {
+        let docker_override = self.create_docker_compose()?;
+        let mut command = Command::new(&self.command);
+        command
+            .arg("compose")
+            .arg("-f")
+            .arg(&self.file)
+            .arg("-f")
+            .arg(&docker_override)
+            .arg("-p")
+            .arg(&self.name)
+            .arg("exec")
+            .arg("-u")
+            .arg(&self.user)
+            .arg("-w")
+            .arg(&self.workspace_folder)
+            .arg(&self.service)
+            .arg(prog)
+            .args(args);
+
+        print_command(&command);
+
+        Ok(command.status()?.success())
+    }
 }

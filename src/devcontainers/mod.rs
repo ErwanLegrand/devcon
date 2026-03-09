@@ -16,11 +16,18 @@ use std::path::PathBuf;
 /// Execute a lifecycle hook inside the container via the provider.
 ///
 /// - `One(cmd)` → `provider.exec(cmd)` (shell-wrapped by the provider)
-/// - `Many(parts)` → join parts with spaces and exec (simple; args must be space-safe)
+/// - `Many(parts)` → `provider.exec_raw(parts[0], parts[1..])` (no shell, injection-safe)
 fn exec_hook(provider: &dyn Provider, hook: &OneOrMany) -> std::io::Result<bool> {
     match hook {
         OneOrMany::One(cmd) => provider.exec(cmd.clone()),
-        OneOrMany::Many(parts) => provider.exec(parts.join(" ")),
+        OneOrMany::Many(_) => {
+            if let Some((prog, args)) = hook.to_exec_parts() {
+                let args_ref: Vec<&str> = args.iter().map(String::as_str).collect();
+                provider.exec_raw(&prog, &args_ref)
+            } else {
+                Ok(true)
+            }
+        }
     }
 }
 

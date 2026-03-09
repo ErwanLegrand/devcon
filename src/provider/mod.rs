@@ -69,6 +69,15 @@ pub trait Provider {
     /// # Errors
     /// Returns an error if the underlying exec command fails to spawn or exits with an error.
     fn exec(&self, cmd: String) -> Result<bool>;
+    /// Execute a program directly inside the container without a shell wrapper.
+    ///
+    /// `prog` is the executable to run; `args` are its arguments passed as
+    /// separate tokens (no shell interpretation, no word-splitting, no injection).
+    /// Use this for the array form of lifecycle hooks (`Many` variant).
+    ///
+    /// # Errors
+    /// Returns an error if the underlying exec command fails to spawn or exits with an error.
+    fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool>;
 }
 
 pub fn print_command(command: &std::process::Command) {
