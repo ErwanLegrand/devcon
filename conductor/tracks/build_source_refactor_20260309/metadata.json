@@ -1,0 +1,7 @@
+{
+  "id": "build_source_refactor_20260309",
+  "title": "build_source_for Refactor — Replace bool Parameter with Explicit Enum",
+  "status": "planned",
+  "priority": "low",
+  "created": "2026-03-09"
+}

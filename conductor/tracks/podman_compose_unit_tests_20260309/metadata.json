@@ -1,0 +1,7 @@
+{
+  "id": "podman_compose_unit_tests_20260309",
+  "title": "PodmanCompose Unit Tests — running(), cp(), rm() Bug Fix Coverage",
+  "status": "planned",
+  "priority": "low",
+  "created": "2026-03-09"
+}
