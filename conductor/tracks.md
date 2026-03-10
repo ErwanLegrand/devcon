@@ -212,10 +212,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Refactor — Provider Trait exec Methods Return Result<()>
+## [x] Track: Refactor — Provider Trait exec Methods Return Result<()>
 *Change exec() and exec_raw() to return Result<()> (Err on non-zero exit) instead of Result<bool>. Simplifies callers via ? propagation.*
 *Priority: Medium. From: code_review_thorough.*
-*Link: [./tracks/refactor_provider_result_api_20260309/](./tracks/refactor_provider_result_api_20260309/)*
+*Link: [./archive/refactor_provider_result_api_20260309/](./archive/refactor_provider_result_api_20260309/)*
 
 ---
 
@@ -235,10 +235,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Medium Features
 
-## [ ] Track: Feature — Full build.context and build.args Support for All Providers
+## [x] Track: Feature — Full build.context and build.args Support for All Providers
 *Pass build.context as build root and build.args as --build-arg flags in all four providers. Inject into compose override template.*
 *Priority: Medium. From: code_review_thorough + test_coverage_assessment.*
-*Link: [./tracks/feature_build_context_20260309/](./tracks/feature_build_context_20260309/)*
+*Link: [./archive/feature_build_context_20260309/](./archive/feature_build_context_20260309/)*
 
 ---
 
