@@ -15,6 +15,9 @@ pub struct PodmanCompose {
     pub podman_command: String,
     pub file: String,
     pub name: String,
+    /// When `true`, appends `:z` to the SSH agent socket volume mount so that
+    /// `SELinux` allows the container to access it.
+    pub selinux_relabel: bool,
     pub service: String,
     pub shell: String,
     pub user: String,
@@ -23,7 +26,7 @@ pub struct PodmanCompose {
 
 impl PodmanCompose {
     fn create_docker_compose(&self) -> Result<ComposeOverrideGuard> {
-        create_compose_override(&self.service, &self.env_vars)
+        create_compose_override(&self.service, &self.env_vars, self.selinux_relabel)
     }
 
     fn extract_container_id(output: &str) -> &str {
@@ -314,6 +317,7 @@ mod tests {
             podman_command: "podman".to_string(),
             file: "docker-compose.yml".to_string(),
             name: name.to_string(),
+            selinux_relabel: false,
             service: service.to_string(),
             shell: "/bin/bash".to_string(),
             user: "vscode".to_string(),

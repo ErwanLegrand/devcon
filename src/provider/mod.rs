@@ -125,7 +125,7 @@ pub(crate) fn redact_env_args(args: &[&str]) -> Vec<String> {
     redacted
 }
 
-pub fn print_command(command: &std::process::Command) {
+pub(crate) fn print_command(command: &std::process::Command) {
     let exec = command.get_program();
     let raw_args: Vec<&str> = command
         .get_args()

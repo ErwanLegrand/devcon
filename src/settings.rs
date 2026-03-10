@@ -30,22 +30,15 @@ pub struct Settings {
 }
 
 impl Settings {
-    /// Load settings from the user config file, or return defaults on any error.
+    /// Load settings from the user config file.
     ///
-    /// Errors are logged to stderr rather than propagated so that a missing or
-    /// malformed config file never prevents the tool from running.
-    #[must_use]
-    pub fn load() -> Self {
-        match Self::try_load() {
-            Ok(settings) => settings,
-            Err(e) => {
-                eprintln!("Warning: could not load settings, using defaults: {e}");
-                Self::default()
-            }
-        }
-    }
-
-    fn try_load() -> Result<Self> {
+    /// Returns `Ok(default)` when the settings file does not exist.
+    /// Returns `Err` when the file exists but cannot be read or parsed.
+    ///
+    /// # Errors
+    /// Returns [`Error::Io`] if the settings file exists but cannot be read.
+    /// Returns [`Error::SettingsLoad`] if the settings file exists but cannot be parsed.
+    pub fn load() -> Result<Self> {
         let Some(dirs) = ProjectDirs::from("com", "Big Refactor", "devcont") else {
             return Ok(Self::default());
         };
@@ -56,9 +49,18 @@ impl Settings {
             return Ok(Self::default());
         }
 
-        let contents = std::fs::read_to_string(&file).map_err(Error::Io)?;
-        let settings: Self =
-            toml::from_str(&contents).map_err(|e| Error::SettingsLoad(e.to_string()))?;
+        let contents = std::fs::read_to_string(&file).map_err(|e| {
+            Error::Io(std::io::Error::new(
+                e.kind(),
+                format!("could not read settings file {}: {e}", file.display()),
+            ))
+        })?;
+        let settings: Self = toml::from_str(&contents).map_err(|e| {
+            Error::SettingsLoad(format!(
+                "could not parse settings file {}: {e}",
+                file.display()
+            ))
+        })?;
         Ok(settings)
     }
 }
@@ -71,9 +73,18 @@ mod tests {
     fn load_returns_default_when_no_config_file() {
         // This test relies on the fact that in CI/test environments there is
         // no devcont config file present.  Settings::load() must not panic.
-        let settings = Settings::load();
+        let settings = Settings::load().expect("load should succeed with no config file");
         // Default provider is Docker
         assert!(matches!(settings.provider, Provider::Docker));
         assert!(settings.dotfiles.is_empty());
+    }
+
+    #[test]
+    fn invalid_toml_fails_to_parse() {
+        // Verify that malformed TOML yields a parse error (unit-tests the parsing layer
+        // without needing a real settings file on disk).
+        let contents = "not valid toml {{{";
+        let result: std::result::Result<Settings, _> = toml::from_str(contents);
+        assert!(result.is_err(), "invalid TOML should fail to parse");
     }
 }

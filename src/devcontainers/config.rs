@@ -44,6 +44,9 @@ pub struct Config {
     pub remote_env: HashMap<String, String>,
     pub docker_compose_file: Option<String>,
     pub service: Option<String>,
+    /// Override `SELinux` auto-detection for SSH socket relabelling (`:z`).
+    /// When absent, `SELinux` enforcing mode is detected at runtime.
+    pub selinux_relabel: Option<bool>,
     #[serde(default = "default_workspace_folder")]
     pub workspace_folder: String,
     #[serde(default)]
@@ -91,17 +94,43 @@ impl Config {
 
     /// Return a container-safe name with the `devcont-` prefix.
     ///
-    /// Lowercases the project name and replaces spaces with dashes.
-    #[must_use]
-    pub fn safe_name(&self) -> String {
-        let name = self
+    /// Lowercases the project name, replaces spaces with dashes, and strips
+    /// characters that are not alphanumeric, `-`, `_`, or `.`.
+    ///
+    /// # Errors
+    /// Returns [`Error::InvalidConfig`] when the project name produces an empty
+    /// string after stripping — this happens for all-Unicode names that have no
+    /// ASCII representation.
+    pub fn safe_name(&self) -> Result<String> {
+        let stripped: String = self
             .name
             .to_lowercase()
             .replace(' ', "-")
-            .trim()
-            .to_string();
+            .chars()
+            .filter(|c| matches!(c, 'a'..='z' | '0'..='9' | '-' | '_' | '.'))
+            .collect();
 
-        format!("devcont-{name}")
+        if stripped.is_empty() {
+            return Err(Error::InvalidConfig(format!(
+                "Cannot derive a container name from project name '{}'. \
+                 Rename the project to use ASCII characters.",
+                self.name
+            )));
+        }
+
+        // Docker requires names to start with a letter or digit.
+        let name = if stripped.starts_with(|c: char| c.is_ascii_alphanumeric()) {
+            stripped
+        } else {
+            eprintln!(
+                "notice: container name derived from '{}' starts with a non-alphanumeric \
+                 character; prepending 'dev-'",
+                self.name
+            );
+            format!("dev-{stripped}")
+        };
+
+        Ok(format!("devcont-{name}"))
     }
 
     /// Return `true` if the container should be stopped after the session ends.
@@ -142,7 +171,7 @@ mod tests {
             "/tests/fixtures/devcontainer.json"
         ));
         let config = Config::parse(fixture).expect("fixture should parse");
-        let name = config.safe_name();
+        let name = config.safe_name().expect("safe_name should succeed");
         assert!(
             name.starts_with("devcont-"),
             "safe_name() should start with 'devcont-', got '{name}'"
@@ -197,8 +226,69 @@ mod tests {
             "/tests/fixtures/devcontainer_minimal.json"
         ));
         let config = Config::parse(minimal).expect("minimal fixture should parse");
-        let name = config.safe_name();
+        let name = config.safe_name().expect("safe_name should succeed");
         assert_eq!(name, "devcont-minimal");
         assert!(!name.contains(' '), "safe_name must not contain spaces");
+    }
+
+    #[test]
+    fn safe_name_strips_unicode_and_returns_error_when_empty() {
+        let config = Config {
+            name: "\u{4e2d}\u{6587}".to_string(), // "中文" (Chinese)
+            image: None,
+            build: None,
+            forward_ports: vec![],
+            initialize_command: None,
+            on_create_command: None,
+            update_content_command: None,
+            post_create_command: None,
+            post_start_command: None,
+            post_attach_command: None,
+            remote_user: "root".to_string(),
+            run_args: vec![],
+            override_command: false,
+            mounts: None,
+            remote_env: std::collections::HashMap::new(),
+            docker_compose_file: None,
+            service: None,
+            selinux_relabel: None,
+            workspace_folder: "/workspace".to_string(),
+            shutdown_action: ShutdownAction::default(),
+        };
+        let result = config.safe_name();
+        assert!(result.is_err(), "all-unicode name should produce an error");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("ASCII"), "error message should mention ASCII");
+    }
+
+    #[test]
+    fn safe_name_prepends_dev_when_starts_with_dash() {
+        let config = Config {
+            name: "-myproject".to_string(),
+            image: None,
+            build: None,
+            forward_ports: vec![],
+            initialize_command: None,
+            on_create_command: None,
+            update_content_command: None,
+            post_create_command: None,
+            post_start_command: None,
+            post_attach_command: None,
+            remote_user: "root".to_string(),
+            run_args: vec![],
+            override_command: false,
+            mounts: None,
+            remote_env: std::collections::HashMap::new(),
+            docker_compose_file: None,
+            service: None,
+            selinux_relabel: None,
+            workspace_folder: "/workspace".to_string(),
+            shutdown_action: ShutdownAction::default(),
+        };
+        let name = config.safe_name().expect("should succeed");
+        assert!(
+            name.starts_with("devcont-dev-"),
+            "name starting with '-' should get 'dev-' prefix, got: {name}"
+        );
     }
 }

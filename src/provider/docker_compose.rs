@@ -21,7 +21,7 @@ pub struct DockerCompose {
 
 impl DockerCompose {
     fn create_docker_compose(&self) -> Result<ComposeOverrideGuard> {
-        create_compose_override(&self.service, &self.env_vars)
+        create_compose_override(&self.service, &self.env_vars, false)
     }
 }
 

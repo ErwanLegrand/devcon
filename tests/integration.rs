@@ -310,6 +310,7 @@ fn load_podman_compose_provider(name: &str) -> PodmanCompose {
         podman_command: "podman".to_string(),
         file: compose_file,
         name: name.to_string(),
+        selinux_relabel: false,
         service: "app".to_string(),
         shell: "sh".to_string(),
         user: "root".to_string(),

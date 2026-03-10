@@ -121,7 +121,8 @@ impl Devcontainer {
                     format!("could not parse {}: {}", file.display(), e),
                 )
             })?;
-            let settings = Settings::load();
+            let settings = Settings::load()
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
             let provider = build_provider(directory, &settings, &config)?;
 
             Ok(Self {
@@ -147,7 +148,11 @@ impl Devcontainer {
         run_args::validate_run_args(&self.config.run_args)
             .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
 
-        run_args::validate_container_name(&self.config.safe_name())
+        let container_name = self
+            .config
+            .safe_name()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))?;
+        run_args::validate_container_name(&container_name)
             .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
 
         run_args::validate_remote_env(&self.config.remote_env)
@@ -465,6 +470,10 @@ fn build_provider(
     settings: &Settings,
     config: &Config,
 ) -> std::io::Result<Box<dyn Provider>> {
+    let name = config
+        .safe_name()
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))?;
+
     match settings.provider {
         crate::settings::Provider::Docker => {
             if config.is_compose() {
@@ -474,7 +483,7 @@ fn build_provider(
                     command: "docker".to_string(),
                     env_vars: sorted_env_vars(config),
                     file,
-                    name: config.safe_name(),
+                    name,
                     service,
                     shell: "sh".to_string(),
                     user: config.remote_user.clone(),
@@ -493,7 +502,7 @@ fn build_provider(
                     command: "docker".to_string(),
                     directory: directory.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
-                    name: config.safe_name(),
+                    name,
                     override_command: config.override_command,
                     run_args: config.run_args.clone(),
                     mounts: config.mounts.clone(),
@@ -505,13 +514,17 @@ fn build_provider(
         crate::settings::Provider::Podman => {
             if config.is_compose() {
                 let (file, service) = compose_path_and_service(directory, config)?;
+                let selinux_relabel = config
+                    .selinux_relabel
+                    .unwrap_or_else(crate::provider::utils::selinux_enforcing);
                 Ok(Box::new(PodmanCompose {
                     build_args: config.build_args(),
                     command: "podman-compose".to_string(),
                     env_vars: sorted_env_vars(config),
                     file,
-                    name: config.safe_name(),
+                    name,
                     podman_command: "podman".to_string(),
+                    selinux_relabel,
                     service,
                     shell: "sh".to_string(),
                     user: config.remote_user.clone(),
@@ -531,7 +544,7 @@ fn build_provider(
                     directory: directory.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     mounts: config.mounts.clone(),
-                    name: config.safe_name(),
+                    name,
                     run_args: config.run_args.clone(),
                     override_command: config.override_command,
                     user: config.remote_user.clone(),

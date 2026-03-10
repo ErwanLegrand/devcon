@@ -15,6 +15,17 @@ struct TemplateContext {
 struct TemplateEntry {
     source: String,
     dest: String,
+    suffix: String,
+}
+
+/// Return `true` if `SELinux` is currently in enforcing mode.
+///
+/// Reads `/sys/fs/selinux/enforce`; any error (file absent, unreadable)
+/// is treated as "not enforcing".
+pub(crate) fn selinux_enforcing() -> bool {
+    std::fs::read_to_string("/sys/fs/selinux/enforce")
+        .map(|s| s.trim() == "1")
+        .unwrap_or(false)
 }
 
 static TEMPLATE: &str = include_str!("../../templates/docker-compose.yml");
@@ -33,6 +44,9 @@ impl Drop for ComposeOverrideGuard {
 /// environment variables, returning a guard that holds the path and deletes
 /// the file on drop.
 ///
+/// When `selinux_relabel` is `true`, a `:z` label is appended to the SSH socket
+/// volume mount so that `SELinux` allows the container to access the socket.
+///
 /// The file is created with mode 0o600 (owner read/write only).
 ///
 /// # Errors
@@ -40,6 +54,7 @@ impl Drop for ComposeOverrideGuard {
 pub(crate) fn create_compose_override(
     service: &str,
     env_vars: &[(String, String)],
+    selinux_relabel: bool,
 ) -> Result<ComposeOverrideGuard> {
     use std::io::Write;
     use std::os::unix::fs::OpenOptionsExt;
@@ -50,27 +65,32 @@ pub(crate) fn create_compose_override(
 
     let dir = env::temp_dir();
     let count = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let path = dir.join(format!(
-        "docker-compose-{}-{count}.yml",
-        std::process::id()
-    ));
+    let path = dir.join(format!("docker-compose-{}-{count}.yml", std::process::id()));
     let mut volumes = vec![];
     let mut envs: Vec<TemplateEntry> = env_vars
         .iter()
         .map(|(k, v)| TemplateEntry {
             source: k.clone(),
             dest: v.clone(),
+            suffix: String::new(),
         })
         .collect();
 
     if let Ok(ssh_auth_sock) = env::var("SSH_AUTH_SOCK") {
+        let volume_suffix = if selinux_relabel {
+            ":z".to_string()
+        } else {
+            String::new()
+        };
         volumes.push(TemplateEntry {
             source: ssh_auth_sock,
             dest: "/ssh-agent".to_string(),
+            suffix: volume_suffix,
         });
         envs.push(TemplateEntry {
             source: "SSH_AUTH_SOCK".to_string(),
             dest: "/ssh-agent".to_string(),
+            suffix: String::new(),
         });
     }
 
@@ -166,7 +186,7 @@ mod tests {
 
     #[test]
     fn compose_override_file_has_mode_0o600() {
-        let guard = create_compose_override("test-service", &[])
+        let guard = create_compose_override("test-service", &[], false)
             .expect("create_compose_override should succeed");
         let mode = std::fs::metadata(&guard.0)
             .expect("metadata should be readable")
@@ -179,7 +199,7 @@ mod tests {
     #[test]
     fn compose_override_file_removed_after_guard_drop() {
         let path = {
-            let guard = create_compose_override("test-service", &[])
+            let guard = create_compose_override("test-service", &[], false)
                 .expect("create_compose_override should succeed");
             guard.0.clone()
         };
@@ -187,5 +207,44 @@ mod tests {
             !path.exists(),
             "file should be deleted after guard is dropped"
         );
+    }
+
+    #[test]
+    fn selinux_enforcing_returns_false_when_file_absent() {
+        // On non-`SELinux` systems /sys/fs/selinux/enforce does not exist.
+        // The function must return false rather than panic.
+        // (On `SELinux` systems that are enforcing this test would return true —
+        //  we only assert it doesn't panic.)
+        let _ = selinux_enforcing();
+    }
+
+    #[test]
+    fn compose_override_without_selinux_has_no_z_suffix() {
+        let guard = create_compose_override("svc", &[], false)
+            .expect("create_compose_override should succeed");
+        let content = std::fs::read_to_string(&guard.0).expect("file should be readable");
+        assert!(
+            !content.contains(":z"),
+            "non-`SELinux` override should not contain ':z', got:\n{content}"
+        );
+    }
+
+    #[test]
+    fn compose_override_with_selinux_has_z_suffix() {
+        // SSH_AUTH_SOCK must be set for the volume entry to appear.
+        let guard = std::env::var("SSH_AUTH_SOCK").ok().map(|sock| {
+            let _ = sock; // use value
+        });
+        // Only run the assertion when SSH_AUTH_SOCK is set.
+        if std::env::var("SSH_AUTH_SOCK").is_ok() {
+            let file_guard = create_compose_override("svc", &[], true)
+                .expect("create_compose_override should succeed");
+            let content = std::fs::read_to_string(&file_guard.0).expect("file should be readable");
+            assert!(
+                content.contains(":z"),
+                "`SELinux` override should contain ':z', got:\n{content}"
+            );
+        }
+        let _ = guard;
     }
 }

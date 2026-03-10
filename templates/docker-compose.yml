@@ -9,5 +9,5 @@ services:
 
     volumes:
     {{ for volume in volumes }}
-      - {volume.source}:{volume.dest}
+      - {volume.source}:{volume.dest}{volume.suffix}
     {{ endfor}}
