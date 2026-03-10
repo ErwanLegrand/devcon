@@ -4,6 +4,7 @@ pub(crate) mod paths;
 mod run_args;
 
 use crate::devcontainers::one_or_many::OneOrMany;
+use crate::error::{Error, Result};
 use crate::provider::Provider;
 use crate::provider::docker::{BuildSource, Docker};
 use crate::provider::docker_compose::DockerCompose;
@@ -13,7 +14,6 @@ use crate::provider::utils::resolve_dockerfile_path;
 use crate::settings::Settings;
 use config::Config;
 use paths::validate_within_root;
-use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -106,7 +106,7 @@ impl Devcontainer {
     ///
     /// # Errors
     /// Returns an error if the config file is missing, cannot be read, or fails to parse.
-    pub fn load(directory: &Path) -> Result<Self, std::io::Error> {
+    pub fn load(directory: &Path) -> Result<Self> {
         let file = directory.join(".devcontainer").join("devcontainer.json");
         let file = if file.is_file() {
             file
@@ -115,14 +115,8 @@ impl Devcontainer {
         };
 
         if file.exists() {
-            let config = Config::parse(&file).map_err(|e| {
-                std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    format!("could not parse {}: {}", file.display(), e),
-                )
-            })?;
-            let settings = Settings::load()
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+            let config = Config::parse(&file)?;
+            let settings = Settings::load()?;
             let provider = build_provider(directory, &settings, &config)?;
 
             Ok(Self {
@@ -131,9 +125,8 @@ impl Devcontainer {
                 settings,
             })
         } else {
-            Err(std::io::Error::new(
-                ErrorKind::NotFound,
-                "Could not find .devcontainer/devcontainer.json or .devcontainer.json",
+            Err(Error::InvalidConfig(
+                "Could not find .devcontainer/devcontainer.json or .devcontainer.json".to_string(),
             ))
         }
     }
@@ -144,28 +137,22 @@ impl Devcontainer {
     ///
     /// # Errors
     /// Returns an error if any provider operation (build, start, attach, etc.) fails.
-    pub fn run(&self, use_cache: bool, trust: bool, no_root_check: bool) -> std::io::Result<()> {
+    pub fn run(&self, use_cache: bool, trust: bool, no_root_check: bool) -> Result<()> {
         run_args::validate_run_args(&self.config.run_args)
-            .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
+            .map_err(Error::InvalidConfig)?;
 
-        let container_name = self
-            .config
-            .safe_name()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))?;
+        let container_name = self.config.safe_name()?;
         run_args::validate_container_name(&container_name)
-            .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
+            .map_err(Error::InvalidConfig)?;
 
         run_args::validate_remote_env(&self.config.remote_env)
-            .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
+            .map_err(Error::InvalidConfig)?;
 
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.initialize_command {
             if !confirm_and_run_host_hook(hook, trust)? {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "initializeCommand declined by user",
-                ));
+                return Err(Error::HookFailed("initializeCommand declined by user".to_string()));
             }
         }
 
@@ -181,7 +168,7 @@ impl Devcontainer {
 
         if let Some(hook) = &self.config.post_start_command {
             exec_hook(provider.as_ref(), hook)
-                .map_err(|e| std::io::Error::new(e.kind(), format!("postStartCommand: {e}")))?;
+                .map_err(|e| Error::HookFailed(format!("postStartCommand: {e}")))?;
         }
 
         self.post_create()?;
@@ -190,7 +177,7 @@ impl Devcontainer {
 
         if let Some(hook) = &self.config.post_attach_command {
             exec_hook(provider.as_ref(), hook)
-                .map_err(|e| std::io::Error::new(e.kind(), format!("postAttachCommand: {e}")))?;
+                .map_err(|e| Error::HookFailed(format!("postAttachCommand: {e}")))?;
         }
 
         if self.config.should_shutdown() {
@@ -209,7 +196,7 @@ impl Devcontainer {
         use_cache: bool,
         trust: bool,
         no_root_check: bool,
-    ) -> std::io::Result<()> {
+    ) -> Result<()> {
         let provider = &self.provider;
         if provider.exists()? {
             provider.stop()?;
@@ -219,7 +206,7 @@ impl Devcontainer {
         self.run(use_cache, trust, no_root_check)
     }
 
-    fn create(&self, use_cache: bool) -> std::io::Result<()> {
+    fn create(&self, use_cache: bool) -> Result<()> {
         let provider = &self.provider;
 
         if !provider.exists()? {
@@ -230,22 +217,22 @@ impl Devcontainer {
         Ok(())
     }
 
-    fn post_create(&self) -> std::io::Result<()> {
+    fn post_create(&self) -> Result<()> {
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.on_create_command {
             exec_hook(provider.as_ref(), hook)
-                .map_err(|e| std::io::Error::new(e.kind(), format!("onCreateCommand: {e}")))?;
+                .map_err(|e| Error::HookFailed(format!("onCreateCommand: {e}")))?;
         }
 
         if let Some(hook) = &self.config.update_content_command {
             exec_hook(provider.as_ref(), hook)
-                .map_err(|e| std::io::Error::new(e.kind(), format!("updateContentCommand: {e}")))?;
+                .map_err(|e| Error::HookFailed(format!("updateContentCommand: {e}")))?;
         }
 
         if let Some(hook) = &self.config.post_create_command {
             exec_hook(provider.as_ref(), hook)
-                .map_err(|e| std::io::Error::new(e.kind(), format!("postCreateCommand: {e}")))?;
+                .map_err(|e| Error::HookFailed(format!("postCreateCommand: {e}")))?;
         }
 
         self.copy_gitconfig()?;
@@ -254,7 +241,7 @@ impl Devcontainer {
         Ok(())
     }
 
-    fn copy(&self, source: &Path, dest: &str) -> std::io::Result<bool> {
+    fn copy(&self, source: &Path, dest: &str) -> Result<bool> {
         if source.exists() {
             let provider = &self.provider;
             let destpath = PathBuf::from(dest);
@@ -271,15 +258,16 @@ impl Devcontainer {
                 source.to_string_lossy().to_string(),
                 destination.to_string(),
             )
+            .map_err(Into::into)
         } else {
-            Err(std::io::Error::new(
+            Err(Error::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 format!("File not found {source:?}"),
-            ))
+            )))
         }
     }
 
-    fn copy_dotfiles(&self) -> std::io::Result<()> {
+    fn copy_dotfiles(&self) -> Result<()> {
         let homedir = if self.config.remote_user == "root" {
             PathBuf::from("/root")
         } else {
@@ -299,7 +287,7 @@ impl Devcontainer {
         Ok(())
     }
 
-    fn copy_gitconfig(&self) -> std::io::Result<bool> {
+    fn copy_gitconfig(&self) -> Result<bool> {
         let path = shellexpand::tilde("~/.gitconfig").to_string();
         let file = PathBuf::from(path);
         if !file.exists() {
@@ -338,11 +326,10 @@ impl Devcontainer {
     }
 }
 
-fn missing_field(field: &str) -> std::io::Error {
-    std::io::Error::new(
-        ErrorKind::InvalidData,
-        format!("devcontainer.json is missing required field: {field}"),
-    )
+fn missing_field(field: &str) -> Error {
+    Error::InvalidConfig(format!(
+        "devcontainer.json is missing required field: {field}"
+    ))
 }
 
 fn sorted_env_vars(config: &Config) -> Vec<(String, String)> {
@@ -358,7 +345,7 @@ fn sorted_env_vars(config: &Config) -> Vec<(String, String)> {
 fn compose_path_and_service(
     directory: &Path,
     config: &Config,
-) -> std::io::Result<(String, String)> {
+) -> Result<(String, String)> {
     let compose_file = config
         .docker_compose_file
         .as_deref()
@@ -374,7 +361,7 @@ fn compose_path_and_service(
     ))
 }
 
-fn docker_build_source(directory: &Path, config: &Config) -> std::io::Result<BuildSource> {
+fn docker_build_source(directory: &Path, config: &Config) -> Result<BuildSource> {
     if let Some(dockerfile) = config.dockerfile() {
         let context = config.build.as_ref().and_then(|b| b.context.as_deref());
         let resolved = resolve_dockerfile_path(directory, &dockerfile, context);
@@ -389,7 +376,7 @@ fn docker_build_source(directory: &Path, config: &Config) -> std::io::Result<Bui
     }
 }
 
-fn podman_build_source(directory: &Path, config: &Config) -> std::io::Result<BuildSource> {
+fn podman_build_source(directory: &Path, config: &Config) -> Result<BuildSource> {
     if let Some(dockerfile) = config.dockerfile() {
         let context = config.build.as_ref().and_then(|b| b.context.as_deref());
         let resolved = resolve_dockerfile_path(directory, &dockerfile, context);
@@ -408,7 +395,7 @@ fn podman_build_source(directory: &Path, config: &Config) -> std::io::Result<Bui
 ///
 /// Relative contexts must resolve within `root`. Absolute contexts outside `root`
 /// emit a warning but are allowed through (they may be intentional host mounts).
-fn validate_build_context(root: &Path, context: &str) -> std::io::Result<()> {
+fn validate_build_context(root: &Path, context: &str) -> Result<()> {
     let context_path = Path::new(context);
     if context_path.is_absolute() {
         if validate_within_root(root, context_path).is_err() {
@@ -420,7 +407,8 @@ fn validate_build_context(root: &Path, context: &str) -> std::io::Result<()> {
         }
         Ok(())
     } else {
-        validate_within_root(root, context_path).map(|_| ())
+        validate_within_root(root, context_path)?;
+        Ok(())
     }
 }
 
@@ -431,13 +419,13 @@ fn validate_build_context(root: &Path, context: &str) -> std::io::Result<()> {
 fn validate_mounts(
     root: &Path,
     mounts: Option<&Vec<std::collections::HashMap<String, String>>>,
-) -> std::io::Result<()> {
+) -> Result<()> {
     if let Some(mount_list) = mounts {
         for mount in mount_list {
             if let Some(source) = mount.get("source") {
                 let source_path = Path::new(source);
                 if !source_path.is_absolute() {
-                    validate_within_root(root, source_path).map(|_| ())?;
+                    validate_within_root(root, source_path)?;
                 }
             }
         }
@@ -465,10 +453,8 @@ fn build_provider(
     directory: &Path,
     settings: &Settings,
     config: &Config,
-) -> std::io::Result<Box<dyn Provider>> {
-    let name = config
-        .safe_name()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))?;
+) -> Result<Box<dyn Provider>> {
+    let name = config.safe_name()?;
 
     match settings.provider {
         crate::settings::Provider::Docker => {
@@ -944,6 +930,38 @@ mod tests {
         );
         dc.rebuild(true, true, true)
             .expect("rebuild() should succeed when container does not exist");
+    }
+
+    // --- typed error variant matching ---
+
+    #[test]
+    fn run_post_create_failure_is_hook_failed_variant() {
+        let dc = make_devcontainer_with_provider(
+            config_with_post_create(),
+            Box::new(MockProvider::failing()),
+        );
+        let err = dc
+            .run(true, true, true)
+            .expect_err("run() must fail when postCreateCommand returns false");
+        assert!(
+            matches!(err, crate::error::Error::HookFailed(_)),
+            "expected Error::HookFailed, got: {err}"
+        );
+    }
+
+    #[test]
+    fn run_on_create_failure_is_hook_failed_variant() {
+        let dc = make_devcontainer_with_provider(
+            config_with_on_create(),
+            Box::new(MockProvider::failing()),
+        );
+        let err = dc
+            .run(true, true, true)
+            .expect_err("run() must fail when onCreateCommand fails");
+        assert!(
+            matches!(err, crate::error::Error::HookFailed(_)),
+            "expected Error::HookFailed, got: {err}"
+        );
     }
 
     #[test]

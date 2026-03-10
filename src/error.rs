@@ -14,6 +14,23 @@ pub enum Error {
 
     #[error("Invalid configuration: {0}")]
     InvalidConfig(String),
+
+    /// A lifecycle hook command exited with a non-zero status.
+    #[error("Lifecycle hook failed — {0}")]
+    HookFailed(String),
+
+    /// A container engine operation failed.
+    #[error("Provider error: {0}")]
+    ProviderError(String),
+}
+
+impl From<Error> for std::io::Error {
+    fn from(e: Error) -> Self {
+        match e {
+            Error::Io(io_err) => io_err,
+            other => std::io::Error::new(std::io::ErrorKind::Other, other.to_string()),
+        }
+    }
 }
 
 /// Convenience alias for `std::result::Result<T, Error>`.
