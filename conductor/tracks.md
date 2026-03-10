@@ -226,10 +226,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Feature — Structured Audit Log for All Container Lifecycle Events
+## [x] Track: Feature — Structured Audit Log for All Container Lifecycle Events
 *Append-only NDJSON audit log at $XDG_DATA_HOME/devcont/audit.log (mode 0o600). Captures container_start, hook_executed, command_run (redacted) events.*
 *Priority: Medium. From: arch_review_stride.*
-*Link: [./tracks/feature_audit_log_20260309/](./tracks/feature_audit_log_20260309/)*
+*Link: [./archive/feature_audit_log_20260309/](./archive/feature_audit_log_20260309/)*
 
 ---
 
