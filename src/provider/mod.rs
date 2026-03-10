@@ -80,17 +80,104 @@ pub trait Provider {
     fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool>;
 }
 
+/// Redact the values of `--env` / `-e` arguments in a list of command-line tokens.
+///
+/// For two-token forms (`--env KEY=VALUE` or `-e KEY=VALUE`), the token following
+/// the flag is replaced with `KEY=***`. For single-token forms (`--env=KEY=VALUE`),
+/// the value after `=` is replaced with `***`.
+pub(crate) fn redact_env_args(args: &[&str]) -> Vec<String> {
+    let mut redacted: Vec<String> = Vec::with_capacity(args.len());
+    let mut redact_next = false;
+
+    for arg in args {
+        if redact_next {
+            // Previous arg was --env or -e; redact value in KEY=VALUE.
+            let display = if let Some(eq) = arg.find('=') {
+                format!("{}=***", &arg[..eq])
+            } else {
+                "***".to_string()
+            };
+            redacted.push(display);
+            redact_next = false;
+        } else if *arg == "--env" || *arg == "-e" {
+            redacted.push((*arg).to_string());
+            redact_next = true;
+        } else if let Some(suffix) = arg.strip_prefix("--env=") {
+            // --env=KEY=VALUE single-token form.
+            let display = if let Some(eq) = suffix.find('=') {
+                format!("--env={}=***", &suffix[..eq])
+            } else {
+                format!("--env={suffix}")
+            };
+            redacted.push(display);
+        } else if let Some(suffix) = arg.strip_prefix("-e=") {
+            let display = if let Some(eq) = suffix.find('=') {
+                format!("-e={}=***", &suffix[..eq])
+            } else {
+                format!("-e={suffix}")
+            };
+            redacted.push(display);
+        } else {
+            redacted.push((*arg).to_string());
+        }
+    }
+
+    redacted
+}
+
 pub fn print_command(command: &std::process::Command) {
     let exec = command.get_program();
-    let args: Vec<&str> = command
+    let raw_args: Vec<&str> = command
         .get_args()
         .map(|arg| arg.to_str().unwrap_or("<non-utf8>"))
         .collect();
 
+    let redacted = redact_env_args(&raw_args);
+
     let output = format!(
         "{} {}",
         exec.to_str().unwrap_or("<non-utf8>"),
-        args.join(" ")
+        redacted.join(" ")
     );
     println!("{}", output.bold().blue());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn redact_two_token_env() {
+        let args = vec!["run", "-e", "SECRET=hunter2", "--name", "c"];
+        let result = redact_env_args(&args);
+        assert_eq!(result, vec!["run", "-e", "SECRET=***", "--name", "c"]);
+    }
+
+    #[test]
+    fn redact_two_token_env_long() {
+        let args = vec!["run", "--env", "MY_TOKEN=abc123"];
+        let result = redact_env_args(&args);
+        assert_eq!(result, vec!["run", "--env", "MY_TOKEN=***"]);
+    }
+
+    #[test]
+    fn redact_single_token_env_equals() {
+        let args = vec!["run", "--env=MY_TOKEN=abc123"];
+        let result = redact_env_args(&args);
+        assert_eq!(result, vec!["run", "--env=MY_TOKEN=***"]);
+    }
+
+    #[test]
+    fn non_env_args_unchanged() {
+        let args = vec!["run", "--name", "foo", "--network", "host"];
+        let result = redact_env_args(&args);
+        assert_eq!(result, vec!["run", "--name", "foo", "--network", "host"]);
+    }
+
+    #[test]
+    fn multiple_env_args_all_redacted() {
+        let args = vec!["run", "-e", "A=1", "-e", "B=2"];
+        let result = redact_env_args(&args);
+        assert_eq!(result, vec!["run", "-e", "A=***", "-e", "B=***"]);
+    }
 }
