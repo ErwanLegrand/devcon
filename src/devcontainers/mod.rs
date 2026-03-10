@@ -55,6 +55,16 @@ fn is_confirmed(answer: &str) -> bool {
     answer.trim().to_lowercase() == "y"
 }
 
+/// Returns true if a root-user warning should be emitted.
+///
+/// Warns when `remote_user` is `"root"` or `"0"` (or empty) and `no_root_check` is false.
+fn should_warn_root(remote_user: &str, no_root_check: bool) -> bool {
+    if no_root_check {
+        return false;
+    }
+    matches!(remote_user.trim(), "" | "root" | "0")
+}
+
 /// Prompt the user for confirmation before running `initializeCommand` on the host.
 ///
 /// When `trust` is true, skips the prompt and runs the hook immediately.
@@ -133,7 +143,7 @@ impl Devcontainer {
     ///
     /// # Errors
     /// Returns an error if any provider operation (build, start, attach, etc.) fails.
-    pub fn run(&self, use_cache: bool, trust: bool) -> std::io::Result<()> {
+    pub fn run(&self, use_cache: bool, trust: bool, no_root_check: bool) -> std::io::Result<()> {
         run_args::validate_run_args(&self.config.run_args)
             .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
 
@@ -149,6 +159,11 @@ impl Devcontainer {
         }
 
         self.create(use_cache)?;
+        if should_warn_root(&self.config.remote_user, no_root_check) {
+            eprintln!(
+                "warning: container will run as root. Consider setting `remoteUser` in devcontainer.json, or pass --no-root-check to suppress this warning."
+            );
+        }
         if !provider.running()? {
             provider.start()?;
         }
@@ -186,14 +201,19 @@ impl Devcontainer {
     ///
     /// # Errors
     /// Returns an error if stopping, removing, or restarting the container fails.
-    pub fn rebuild(&self, use_cache: bool, trust: bool) -> std::io::Result<()> {
+    pub fn rebuild(
+        &self,
+        use_cache: bool,
+        trust: bool,
+        no_root_check: bool,
+    ) -> std::io::Result<()> {
         let provider = &self.provider;
         if provider.exists()? {
             provider.stop()?;
             provider.rm()?;
         }
 
-        self.run(use_cache, trust)
+        self.run(use_cache, trust, no_root_check)
     }
 
     fn create(&self, use_cache: bool) -> std::io::Result<()> {
@@ -686,7 +706,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true)
+            .run(true, true, true)
             .expect_err("run() must fail when postCreateCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -702,7 +722,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true)
+            .run(true, true, true)
             .expect_err("run() must fail when postStartCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -718,7 +738,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true)
+            .run(true, true, true)
             .expect_err("run() must fail when postAttachCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -734,7 +754,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true)
+            .run(true, true, true)
             .expect_err("run() must fail when onCreateCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -750,7 +770,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true)
+            .run(true, true, true)
             .expect_err("run() must fail when updateContentCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -787,5 +807,30 @@ mod tests {
     #[test]
     fn is_confirmed_yes_is_false() {
         assert!(!is_confirmed("yes"));
+    }
+
+    #[test]
+    fn root_user_triggers_warning() {
+        assert!(should_warn_root("root", false));
+    }
+
+    #[test]
+    fn uid_zero_triggers_warning() {
+        assert!(should_warn_root("0", false));
+    }
+
+    #[test]
+    fn empty_user_triggers_warning() {
+        assert!(should_warn_root("", false));
+    }
+
+    #[test]
+    fn non_root_user_no_warning() {
+        assert!(!should_warn_root("vscode", false));
+    }
+
+    #[test]
+    fn root_user_suppressed_with_no_root_check() {
+        assert!(!should_warn_root("root", true));
     }
 }

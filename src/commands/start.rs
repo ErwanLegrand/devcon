@@ -3,10 +3,10 @@ use std::path::PathBuf;
 
 use devcont::devcontainers::Devcontainer;
 
-pub fn run(dir: Option<&str>, trust: bool) -> std::io::Result<()> {
+pub fn run(dir: Option<&str>, trust: bool, no_root_check: bool) -> std::io::Result<()> {
     let directory = get_project_directory(dir)?;
     let devcontainer = Devcontainer::load(&directory)?;
-    devcontainer.run(true, trust)?;
+    devcontainer.run(true, trust, no_root_check)?;
 
     Ok(())
 }
