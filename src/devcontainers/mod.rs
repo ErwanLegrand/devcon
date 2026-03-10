@@ -44,12 +44,36 @@ fn exec_hook(provider: &dyn Provider, hook: &OneOrMany) -> std::io::Result<()> {
 ///
 /// Returns `true` if the command ran and exited successfully, `false` on non-zero exit.
 /// Returns `Ok(true)` when no exec parts are produced (empty Many).
-fn exec_host_hook(hook: &OneOrMany) -> std::io::Result<bool> {
-    if let Some((prog, args)) = hook.to_exec_parts() {
+///
+/// When `timeout_secs` is `Some(n)`, the process is polled every 100 ms; if it has not
+/// exited within `n` seconds the child is killed and an error is returned.
+fn exec_host_hook(hook: &OneOrMany, timeout_secs: Option<u32>) -> std::io::Result<bool> {
+    let Some((prog, args)) = hook.to_exec_parts() else {
+        return Ok(true);
+    };
+
+    let Some(secs) = timeout_secs else {
         let status = std::process::Command::new(&prog).args(&args).status()?;
         return Ok(status.success());
+    };
+
+    let mut child = std::process::Command::new(&prog).args(&args).spawn()?;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(u64::from(secs));
+
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status.success());
+        }
+        if std::time::Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                format!("hook timed out after {secs}s"),
+            ));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
-    Ok(true)
 }
 
 /// Return a displayable string for a hook command (used in audit log entries).
@@ -82,7 +106,11 @@ fn should_warn_root(remote_user: &str, no_root_check: bool) -> bool {
 /// and returns `false` (without running the hook) if the user declines.
 ///
 /// Returns `Ok(false)` to signal that the caller should abort (hook declined or hook failed).
-fn confirm_and_run_host_hook(hook: &OneOrMany, trust: bool) -> std::io::Result<bool> {
+fn confirm_and_run_host_hook(
+    hook: &OneOrMany,
+    trust: bool,
+    timeout_secs: Option<u32>,
+) -> std::io::Result<bool> {
     if trust {
         eprintln!("initializeCommand trusted, running on host.");
     } else {
@@ -98,7 +126,7 @@ fn confirm_and_run_host_hook(hook: &OneOrMany, trust: bool) -> std::io::Result<b
             return Ok(false);
         }
     }
-    exec_host_hook(hook)
+    exec_host_hook(hook, timeout_secs)
 }
 
 /// A loaded and configured dev container instance.
@@ -106,6 +134,11 @@ pub struct Devcontainer {
     config: Config,
     provider: Box<dyn Provider>,
     settings: Settings,
+    /// Per-hook timeout in seconds. `None` means no timeout.
+    ///
+    /// Sourced from `hookTimeoutSeconds` in `devcontainer.json`, overridable via
+    /// `--hook-timeout` at the CLI. Set with [`Devcontainer::with_hook_timeout`].
+    hook_timeout_secs: Option<u32>,
 }
 
 impl Devcontainer {
@@ -128,17 +161,28 @@ impl Devcontainer {
             let config = Config::parse(&file)?;
             let settings = Settings::load()?;
             let provider = build_provider(directory, &settings, &config)?;
+            let hook_timeout_secs = config.hook_timeout_seconds;
 
             Ok(Self {
                 config: config.clone(),
                 provider,
                 settings,
+                hook_timeout_secs,
             })
         } else {
             Err(Error::InvalidConfig(
                 "Could not find .devcontainer/devcontainer.json or .devcontainer.json".to_string(),
             ))
         }
+    }
+
+    /// Override the hook timeout for this instance (typically from `--hook-timeout` CLI flag).
+    ///
+    /// Calling this replaces any `hookTimeoutSeconds` value from `devcontainer.json`.
+    #[must_use]
+    pub fn with_hook_timeout(mut self, secs: u32) -> Self {
+        self.hook_timeout_secs = Some(secs);
+        self
     }
 
     /// Build, start, and attach to the dev container, running lifecycle hooks.
@@ -171,7 +215,7 @@ impl Devcontainer {
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.initialize_command {
-            if !confirm_and_run_host_hook(hook, trust)? {
+            if !confirm_and_run_host_hook(hook, trust, self.hook_timeout_secs)? {
                 return Err(Error::HookFailed(
                     "initializeCommand declined by user".to_string(),
                 ));
@@ -703,6 +747,7 @@ mod tests {
             config,
             provider,
             settings: Settings::default(),
+            hook_timeout_secs: None,
         }
     }
 
@@ -1064,35 +1109,35 @@ mod tests {
     #[test]
     fn exec_host_hook_one_exits_zero_returns_true() {
         let hook = OneOrMany::One("true".to_string());
-        let result = exec_host_hook(&hook).expect("sh -c true should succeed");
+        let result = exec_host_hook(&hook, None).expect("sh -c true should succeed");
         assert!(result, "exit 0 → should return true");
     }
 
     #[test]
     fn exec_host_hook_one_exits_nonzero_returns_false() {
         let hook = OneOrMany::One("false".to_string());
-        let result = exec_host_hook(&hook).expect("sh -c false should not error");
+        let result = exec_host_hook(&hook, None).expect("sh -c false should not error");
         assert!(!result, "exit 1 → should return false");
     }
 
     #[test]
     fn exec_host_hook_many_exits_zero_returns_true() {
         let hook = OneOrMany::Many(vec!["true".to_string()]);
-        let result = exec_host_hook(&hook).expect("true binary should succeed");
+        let result = exec_host_hook(&hook, None).expect("true binary should succeed");
         assert!(result, "Many([true]) exit 0 → should return true");
     }
 
     #[test]
     fn exec_host_hook_many_exits_nonzero_returns_false() {
         let hook = OneOrMany::Many(vec!["false".to_string()]);
-        let result = exec_host_hook(&hook).expect("false binary should not error");
+        let result = exec_host_hook(&hook, None).expect("false binary should not error");
         assert!(!result, "Many([false]) exit 1 → should return false");
     }
 
     #[test]
     fn exec_host_hook_many_empty_returns_true() {
         let hook = OneOrMany::Many(vec![]);
-        let result = exec_host_hook(&hook).expect("empty Many hook should succeed");
+        let result = exec_host_hook(&hook, None).expect("empty Many hook should succeed");
         assert!(
             result,
             "empty Many hook should return true without executing anything"
@@ -1102,7 +1147,7 @@ mod tests {
     #[test]
     fn exec_host_hook_nonexistent_command_returns_err() {
         let hook = OneOrMany::Many(vec!["__nonexistent_devcont_cmd_xyz_42__".to_string()]);
-        let result = exec_host_hook(&hook);
+        let result = exec_host_hook(&hook, None);
         assert!(
             result.is_err(),
             "nonexistent command should return Err, not Ok"
@@ -1114,7 +1159,55 @@ mod tests {
         // The arg "hello world" must reach echo as a single argument (not split).
         // If echo receives it as one arg it prints "hello world" and exits 0.
         let hook = OneOrMany::Many(vec!["echo".to_string(), "hello world".to_string()]);
-        let result = exec_host_hook(&hook).expect("echo with space arg should succeed");
+        let result = exec_host_hook(&hook, None).expect("echo with space arg should succeed");
         assert!(result, "echo with space-containing arg should exit 0");
+    }
+
+    // --- hook timeout ---
+
+    #[test]
+    fn exec_host_hook_completes_within_timeout_returns_success() {
+        // `true` exits immediately — well within a 5-second timeout.
+        let hook = OneOrMany::Many(vec!["true".to_string()]);
+        let result = exec_host_hook(&hook, Some(5)).expect("hook within timeout should not error");
+        assert!(result, "successful hook within timeout should return true");
+    }
+
+    #[test]
+    fn exec_host_hook_exceeds_timeout_returns_err() {
+        // `sleep 60` won't finish within a 1-second timeout.
+        let hook = OneOrMany::Many(vec!["sleep".to_string(), "60".to_string()]);
+        let result = exec_host_hook(&hook, Some(1));
+        assert!(result.is_err(), "hook exceeding timeout should return Err");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("timed out"),
+            "error message should mention 'timed out', got: {err_msg}"
+        );
+    }
+
+    #[test]
+    fn config_hook_timeout_seconds_parsed() {
+        let c: Config =
+            json5::from_str(r#"{ "name": "t", "image": "alpine", "hookTimeoutSeconds": 120 }"#)
+                .expect("should parse hookTimeoutSeconds");
+        assert_eq!(c.hook_timeout_seconds, Some(120));
+    }
+
+    #[test]
+    fn config_hook_timeout_seconds_absent_is_none() {
+        let c: Config = json5::from_str(r#"{ "name": "t", "image": "alpine" }"#)
+            .expect("should parse with no hookTimeoutSeconds");
+        assert_eq!(c.hook_timeout_seconds, None);
+    }
+
+    #[test]
+    fn with_hook_timeout_overrides_config_value() {
+        let config: Config =
+            json5::from_str(r#"{ "name": "t", "image": "alpine", "hookTimeoutSeconds": 30 }"#)
+                .expect("should parse");
+        let dc = make_devcontainer_with_provider(config, Box::new(MockProvider::new()));
+        let dc = dc.with_hook_timeout(60);
+        assert_eq!(dc.hook_timeout_secs, Some(60));
     }
 }

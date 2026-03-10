@@ -13,9 +13,13 @@ pub fn run(
     trust: bool,
     no_root_check: bool,
     no_audit_log: bool,
+    hook_timeout: Option<u32>,
 ) -> std::io::Result<()> {
     let directory = get_project_directory(dir)?;
-    let devcontainer = Devcontainer::load(&directory)?;
+    let mut devcontainer = Devcontainer::load(&directory)?;
+    if let Some(secs) = hook_timeout {
+        devcontainer = devcontainer.with_hook_timeout(secs);
+    }
     devcontainer.run(true, trust, no_root_check, no_audit_log)?;
 
     Ok(())

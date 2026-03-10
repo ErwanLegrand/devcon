@@ -28,6 +28,9 @@ enum Commands {
         /// Disable the structured audit log for this invocation.
         #[arg(long)]
         no_audit_log: bool,
+        /// Override the per-hook timeout in seconds (overrides hookTimeoutSeconds in config).
+        #[arg(long)]
+        hook_timeout: Option<u32>,
     },
     Start {
         dir: Option<String>,
@@ -40,6 +43,9 @@ enum Commands {
         /// Disable the structured audit log for this invocation.
         #[arg(long)]
         no_audit_log: bool,
+        /// Override the per-hook timeout in seconds (overrides hookTimeoutSeconds in config).
+        #[arg(long)]
+        hook_timeout: Option<u32>,
     },
 }
 
@@ -52,8 +58,15 @@ fn main() -> anyhow::Result<()> {
             trust,
             no_root_check,
             no_audit_log,
+            hook_timeout,
         }) => {
-            commands::start::run(dir.as_deref(), *trust, *no_root_check, *no_audit_log)?;
+            commands::start::run(
+                dir.as_deref(),
+                *trust,
+                *no_root_check,
+                *no_audit_log,
+                *hook_timeout,
+            )?;
         }
         Some(Commands::Rebuild {
             dir,
@@ -61,6 +74,7 @@ fn main() -> anyhow::Result<()> {
             trust,
             no_root_check,
             no_audit_log,
+            hook_timeout,
         }) => {
             commands::rebuild::run(
                 dir.as_deref(),
@@ -68,10 +82,11 @@ fn main() -> anyhow::Result<()> {
                 *trust,
                 *no_root_check,
                 *no_audit_log,
+                *hook_timeout,
             )?;
         }
         None => {
-            commands::start::run(None, false, false, false)?;
+            commands::start::run(None, false, false, false, None)?;
         }
     }
 

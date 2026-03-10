@@ -68,6 +68,11 @@ pub struct Config {
     /// Working directory inside the container. Defaults to `"/workspace"`.
     #[serde(default = "default_workspace_folder")]
     pub workspace_folder: String,
+    /// Maximum number of seconds any single lifecycle hook may run.
+    ///
+    /// When absent (the default), hooks run without a timeout.
+    /// Overridable at runtime with `--hook-timeout`.
+    pub hook_timeout_seconds: Option<u32>,
     /// Container shutdown behaviour when the session ends.
     #[serde(default)]
     shutdown_action: ShutdownAction,
@@ -272,6 +277,7 @@ mod tests {
             service: None,
             selinux_relabel: None,
             workspace_folder: "/workspace".to_string(),
+            hook_timeout_seconds: None,
             shutdown_action: ShutdownAction::default(),
         };
         let result = config.safe_name();
@@ -518,6 +524,7 @@ mod tests {
             service: None,
             selinux_relabel: None,
             workspace_folder: "/workspace".to_string(),
+            hook_timeout_seconds: None,
             shutdown_action: ShutdownAction::default(),
         };
         let name = config.safe_name().expect("digit-start should succeed");
@@ -604,6 +611,7 @@ mod tests {
             service: None,
             selinux_relabel: None,
             workspace_folder: "/workspace".to_string(),
+            hook_timeout_seconds: None,
             shutdown_action: ShutdownAction::default(),
         };
         let name = config.safe_name().expect("should succeed");
