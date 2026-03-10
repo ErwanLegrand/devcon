@@ -5,7 +5,7 @@ use std::process::Command;
 
 use super::Provider;
 use super::print_command;
-use crate::provider::docker::BuildSource;
+use crate::provider::docker::{BuildSource, exact_name_match};
 
 const IMAGE_NAMESPACE: &str = "devcont";
 
@@ -163,35 +163,28 @@ impl Provider for Podman {
     fn exists(&self) -> Result<bool> {
         let output = Command::new(&self.command)
             .arg("ps")
-            .arg("-aq")
+            .arg("-a")
             .arg("--filter")
             .arg(format!("name={}", &self.name))
+            .arg("--format")
+            .arg("{{.Names}}")
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
-
-        Ok(!value.is_empty())
+        Ok(exact_name_match(output, &self.name))
     }
 
     fn running(&self) -> Result<bool> {
         let output = Command::new(&self.command)
             .arg("ps")
-            .arg("-q")
             .arg("--filter")
             .arg(format!("name={}", &self.name))
+            .arg("--format")
+            .arg("{{.Names}}")
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
-
-        Ok(!value.is_empty())
+        Ok(exact_name_match(output, &self.name))
     }
 
     fn cp(&self, source: String, destination: String) -> Result<bool> {

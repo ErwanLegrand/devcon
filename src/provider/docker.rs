@@ -181,35 +181,28 @@ impl Provider for Docker {
     fn exists(&self) -> Result<bool> {
         let output = Command::new(&self.command)
             .arg("ps")
-            .arg("-aq")
+            .arg("-a")
             .arg("--filter")
             .arg(format!("name={}", &self.name))
+            .arg("--format")
+            .arg("{{.Names}}")
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
-
-        Ok(!value.is_empty())
+        Ok(exact_name_match(output, &self.name))
     }
 
     fn running(&self) -> Result<bool> {
         let output = Command::new(&self.command)
             .arg("ps")
-            .arg("-q")
             .arg("--filter")
             .arg(format!("name={}", &self.name))
+            .arg("--format")
+            .arg("{{.Names}}")
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
-
-        Ok(!value.is_empty())
+        Ok(exact_name_match(output, &self.name))
     }
 
     fn cp(&self, source: String, destination: String) -> Result<bool> {
@@ -257,5 +250,53 @@ impl Provider for Docker {
         print_command(&command);
 
         Ok(command.status()?.success())
+    }
+}
+
+/// Returns true if any name in `output` (newline-separated) exactly matches `name`.
+pub(crate) fn exact_name_match(output: Vec<u8>, name: &str) -> bool {
+    String::from_utf8(output)
+        .unwrap_or_default()
+        .lines()
+        .any(|line| line.trim() == name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exact_name_match_matches_exact() {
+        let output = b"foo\n".to_vec();
+        assert!(exact_name_match(output, "foo"));
+    }
+
+    #[test]
+    fn exact_name_match_no_prefix_match() {
+        let output = b"foobar\n".to_vec();
+        assert!(!exact_name_match(output, "foo"));
+    }
+
+    #[test]
+    fn exact_name_match_no_suffix_match() {
+        let output = b"barfoo\n".to_vec();
+        assert!(!exact_name_match(output, "foo"));
+    }
+
+    #[test]
+    fn exact_name_match_empty_output() {
+        assert!(!exact_name_match(vec![], "foo"));
+    }
+
+    #[test]
+    fn exact_name_match_multiple_names_one_matches() {
+        let output = b"foobar\nfoo\nbaz\n".to_vec();
+        assert!(exact_name_match(output, "foo"));
+    }
+
+    #[test]
+    fn exact_name_match_multiple_names_none_match() {
+        let output = b"foobar\nbaz\n".to_vec();
+        assert!(!exact_name_match(output, "foo"));
     }
 }
