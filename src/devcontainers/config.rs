@@ -6,6 +6,7 @@ use crate::devcontainers::one_or_many::OneOrMany;
 use crate::error::{Error, Result};
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 enum ShutdownAction {
     None,
     StopContainer,
@@ -259,6 +260,222 @@ mod tests {
         assert!(result.is_err(), "all-unicode name should produce an error");
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("ASCII"), "error message should mention ASCII");
+    }
+
+    // --- Field deserialization tests ---
+
+    fn parse_inline(json: &str) -> Config {
+        json5::from_str(json).expect("inline fixture should parse")
+    }
+
+    #[test]
+    fn forward_ports_parsed_as_vec() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine", "forwardPorts": [3000, 8080] }"#);
+        assert_eq!(c.forward_ports, vec![3000u16, 8080]);
+    }
+
+    #[test]
+    fn forward_ports_absent_defaults_to_empty() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(c.forward_ports.is_empty());
+    }
+
+    #[test]
+    fn remote_user_parsed_explicitly() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine", "remoteUser": "vscode" }"#);
+        assert_eq!(c.remote_user, "vscode");
+    }
+
+    #[test]
+    fn remote_user_defaults_to_root() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert_eq!(c.remote_user, "root");
+    }
+
+    #[test]
+    fn run_args_parsed_as_vec() {
+        let c =
+            parse_inline(r#"{ "name": "t", "image": "alpine", "runArgs": ["--network", "host"] }"#);
+        assert_eq!(c.run_args, vec!["--network", "host"]);
+    }
+
+    #[test]
+    fn run_args_absent_defaults_to_empty() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(c.run_args.is_empty());
+    }
+
+    #[test]
+    fn override_command_parsed_true() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine", "overrideCommand": true }"#);
+        assert!(c.override_command);
+    }
+
+    #[test]
+    fn override_command_defaults_to_false() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(!c.override_command);
+    }
+
+    #[test]
+    fn remote_env_parsed_as_map() {
+        let c = parse_inline(
+            r#"{ "name": "t", "image": "alpine", "remoteEnv": { "FOO": "bar", "BAZ": "1" } }"#,
+        );
+        assert_eq!(c.remote_env.get("FOO").map(String::as_str), Some("bar"));
+        assert_eq!(c.remote_env.get("BAZ").map(String::as_str), Some("1"));
+    }
+
+    #[test]
+    fn remote_env_absent_defaults_to_empty() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(c.remote_env.is_empty());
+    }
+
+    #[test]
+    fn selinux_relabel_parsed_true() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine", "selinuxRelabel": true }"#);
+        assert_eq!(c.selinux_relabel, Some(true));
+    }
+
+    #[test]
+    fn selinux_relabel_parsed_false() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine", "selinuxRelabel": false }"#);
+        assert_eq!(c.selinux_relabel, Some(false));
+    }
+
+    #[test]
+    fn selinux_relabel_absent_is_none() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(c.selinux_relabel.is_none());
+    }
+
+    #[test]
+    fn workspace_folder_parsed() {
+        let c = parse_inline(
+            r#"{ "name": "t", "image": "alpine", "workspaceFolder": "/home/user/app" }"#,
+        );
+        assert_eq!(c.workspace_folder, "/home/user/app");
+    }
+
+    #[test]
+    fn workspace_folder_defaults_to_workspace() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert_eq!(c.workspace_folder, "/workspace");
+    }
+
+    #[test]
+    fn shutdown_action_none_means_no_shutdown() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine", "shutdownAction": "none" }"#);
+        assert!(!c.should_shutdown());
+    }
+
+    #[test]
+    fn shutdown_action_stop_container_means_shutdown() {
+        let c = parse_inline(
+            r#"{ "name": "t", "image": "alpine", "shutdownAction": "stopContainer" }"#,
+        );
+        assert!(c.should_shutdown());
+    }
+
+    #[test]
+    fn shutdown_action_absent_defaults_to_stop_container() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(c.should_shutdown());
+    }
+
+    #[test]
+    fn initialize_command_as_string() {
+        let c =
+            parse_inline(r#"{ "name": "t", "image": "alpine", "initializeCommand": "init.sh" }"#);
+        assert!(c.initialize_command.is_some());
+    }
+
+    #[test]
+    fn initialize_command_as_array() {
+        let c = parse_inline(
+            r#"{ "name": "t", "image": "alpine", "initializeCommand": ["bash", "init.sh"] }"#,
+        );
+        assert!(matches!(
+            c.initialize_command,
+            Some(crate::devcontainers::one_or_many::OneOrMany::Many(_))
+        ));
+    }
+
+    #[test]
+    fn on_create_command_as_string() {
+        let c =
+            parse_inline(r#"{ "name": "t", "image": "alpine", "onCreateCommand": "create.sh" }"#);
+        assert!(c.on_create_command.is_some());
+    }
+
+    #[test]
+    fn update_content_command_as_array() {
+        let c = parse_inline(
+            r#"{ "name": "t", "image": "alpine", "updateContentCommand": ["npm", "install"] }"#,
+        );
+        assert!(c.update_content_command.is_some());
+    }
+
+    #[test]
+    fn post_create_command_as_string() {
+        let c =
+            parse_inline(r#"{ "name": "t", "image": "alpine", "postCreateCommand": "post.sh" }"#);
+        assert!(c.post_create_command.is_some());
+    }
+
+    #[test]
+    fn post_start_command_parsed() {
+        let c =
+            parse_inline(r#"{ "name": "t", "image": "alpine", "postStartCommand": "start.sh" }"#);
+        assert!(c.post_start_command.is_some());
+    }
+
+    #[test]
+    fn post_attach_command_parsed() {
+        let c =
+            parse_inline(r#"{ "name": "t", "image": "alpine", "postAttachCommand": "attach.sh" }"#);
+        assert!(c.post_attach_command.is_some());
+    }
+
+    #[test]
+    fn build_args_parsed_from_build_block() {
+        let c = parse_inline(
+            r#"{ "name": "t", "build": { "dockerfile": "Dockerfile", "args": { "VER": "1.2" } } }"#,
+        );
+        assert_eq!(c.build_args().get("VER").map(String::as_str), Some("1.2"));
+    }
+
+    #[test]
+    fn build_args_absent_returns_empty_map() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(c.build_args().is_empty());
+    }
+
+    #[test]
+    fn is_compose_true_when_docker_compose_file_set() {
+        let c = parse_inline(
+            r#"{ "name": "t", "dockerComposeFile": "docker-compose.yml", "service": "app" }"#,
+        );
+        assert!(c.is_compose());
+    }
+
+    #[test]
+    fn is_compose_false_without_docker_compose_file() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(!c.is_compose());
+    }
+
+    #[test]
+    fn dockerfile_method_returns_none_for_image_config() {
+        let c = parse_inline(r#"{ "name": "t", "image": "alpine" }"#);
+        assert!(c.dockerfile().is_none());
+    }
+
+    #[test]
+    fn dockerfile_method_returns_path_from_build_block() {
+        let c = parse_inline(r#"{ "name": "t", "build": { "dockerfile": "Dockerfile" } }"#);
+        assert_eq!(c.dockerfile(), Some("Dockerfile".to_string()));
     }
 
     #[test]

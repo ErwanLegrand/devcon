@@ -23,6 +23,7 @@ impl Default for Provider {
 #[derive(Debug, Default, Deserialize)]
 pub struct Settings {
     /// Dotfiles to copy into the container (relative paths from `~`).
+    #[serde(default)]
     pub dotfiles: Vec<String>,
     #[serde(default)]
     /// Container engine to use.
@@ -86,5 +87,40 @@ mod tests {
         let contents = "not valid toml {{{";
         let result: std::result::Result<Settings, _> = toml::from_str(contents);
         assert!(result.is_err(), "invalid TOML should fail to parse");
+    }
+
+    #[test]
+    fn provider_docker_is_default() {
+        let s: Settings = toml::from_str("").expect("empty TOML should parse");
+        assert!(matches!(s.provider, Provider::Docker));
+    }
+
+    #[test]
+    fn provider_podman_parses() {
+        let s: Settings =
+            toml::from_str("provider = \"podman\"").expect("podman provider should parse");
+        assert!(matches!(s.provider, Provider::Podman));
+    }
+
+    #[test]
+    fn unknown_provider_value_fails_to_parse() {
+        let result: std::result::Result<Settings, _> = toml::from_str("provider = \"nspawn\"");
+        assert!(
+            result.is_err(),
+            "unknown provider value should fail to parse"
+        );
+    }
+
+    #[test]
+    fn dotfiles_parsed_as_vec() {
+        let s: Settings =
+            toml::from_str("dotfiles = [\".bashrc\", \".vimrc\"]").expect("dotfiles should parse");
+        assert_eq!(s.dotfiles, vec![".bashrc", ".vimrc"]);
+    }
+
+    #[test]
+    fn dotfiles_absent_defaults_to_empty() {
+        let s: Settings = toml::from_str("").expect("empty TOML should parse");
+        assert!(s.dotfiles.is_empty());
     }
 }
