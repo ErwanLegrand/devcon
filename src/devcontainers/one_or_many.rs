@@ -103,4 +103,70 @@ mod tests {
         let v = OneOrMany::Many(vec![]);
         assert!(v.to_exec_parts().is_none());
     }
+
+    // --- Edge-case deserialization ---
+
+    #[test]
+    fn deserialize_empty_string_is_one() {
+        let v: OneOrMany = json5::from_str(r#""""#).expect("empty string should parse");
+        assert_eq!(v, OneOrMany::One("".to_string()));
+    }
+
+    #[test]
+    fn deserialize_empty_array_is_many_empty() {
+        let v: OneOrMany = json5::from_str("[]").expect("empty array should parse");
+        assert_eq!(v, OneOrMany::Many(vec![]));
+    }
+
+    #[test]
+    fn deserialize_null_fails() {
+        let result: Result<OneOrMany, _> = json5::from_str("null");
+        assert!(
+            result.is_err(),
+            "null should fail to deserialize as OneOrMany"
+        );
+    }
+
+    #[test]
+    fn deserialize_integer_fails() {
+        let result: Result<OneOrMany, _> = json5::from_str("42");
+        assert!(
+            result.is_err(),
+            "integer should fail to deserialize as OneOrMany"
+        );
+    }
+
+    #[test]
+    fn deserialize_boolean_fails() {
+        let result: Result<OneOrMany, _> = json5::from_str("true");
+        assert!(
+            result.is_err(),
+            "boolean should fail to deserialize as OneOrMany"
+        );
+    }
+
+    #[test]
+    fn deserialize_nested_array_fails() {
+        let result: Result<OneOrMany, _> = json5::from_str(r#"[["a"]]"#);
+        assert!(
+            result.is_err(),
+            "nested array should fail to deserialize as OneOrMany"
+        );
+    }
+
+    #[test]
+    fn to_exec_parts_one_wraps_in_sh() {
+        let v = OneOrMany::One("echo hello".to_string());
+        let (prog, args) = v.to_exec_parts().unwrap();
+        assert_eq!(prog, "sh");
+        assert_eq!(args, vec!["-c", "echo hello"]);
+    }
+
+    #[test]
+    fn to_exec_parts_single_element_many_has_no_args() {
+        let v = OneOrMany::Many(vec!["ls".to_string()]);
+        let (prog, args) = v.to_exec_parts().unwrap();
+        assert_eq!(prog, "ls");
+        assert!(args.is_empty());
+    }
 }

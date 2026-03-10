@@ -64,32 +64,107 @@ impl PodmanCompose {
             "--remove-orphans".to_string(),
         ]
     }
+
+    /// Build the base compose args: `-f <file> -f <override> -p <name>`.
+    fn compose_base_args(&self, override_file: &Path) -> Vec<String> {
+        vec![
+            "-f".to_string(),
+            self.file.clone(),
+            "-f".to_string(),
+            override_file.to_string_lossy().into_owned(),
+            "-p".to_string(),
+            self.name.clone(),
+        ]
+    }
+
+    fn build_command_args(&self, override_file: &Path, use_cache: bool) -> Vec<String> {
+        let mut args = self.compose_base_args(override_file);
+        args.push("build".to_string());
+        if !use_cache {
+            args.push("--no-cache".to_string());
+        }
+        for (key, value) in &self.build_args {
+            args.push("--build-arg".to_string());
+            args.push(format!("{key}={value}"));
+        }
+        args
+    }
+
+    fn start_command_args(&self, override_file: &Path) -> Vec<String> {
+        let mut args = self.compose_base_args(override_file);
+        args.extend(["up".to_string(), "--detach".to_string()]);
+        args
+    }
+
+    fn stop_command_args(&self, override_file: &Path) -> Vec<String> {
+        let mut args = self.compose_base_args(override_file);
+        args.push("stop".to_string());
+        args
+    }
+
+    fn restart_command_args(&self, override_file: &Path) -> Vec<String> {
+        let mut args = self.compose_base_args(override_file);
+        args.push("restart".to_string());
+        args
+    }
+
+    fn attach_command_args(&self, override_file: &Path) -> Vec<String> {
+        let mut args = self.compose_base_args(override_file);
+        args.extend([
+            "exec".to_string(),
+            "-u".to_string(),
+            self.user.clone(),
+            "-w".to_string(),
+            self.workspace_folder.clone(),
+            self.service.clone(),
+            self.shell.clone(),
+        ]);
+        args
+    }
+
+    fn exec_command_args(&self, override_file: &Path, cmd: &str) -> Vec<String> {
+        let mut args = self.compose_base_args(override_file);
+        args.extend([
+            "exec".to_string(),
+            "-u".to_string(),
+            self.user.clone(),
+            "-w".to_string(),
+            self.workspace_folder.clone(),
+            self.service.clone(),
+            "sh".to_string(),
+            "-c".to_string(),
+            cmd.to_string(),
+        ]);
+        args
+    }
+
+    fn exec_raw_command_args(
+        &self,
+        override_file: &Path,
+        prog: &str,
+        extra: &[&str],
+    ) -> Vec<String> {
+        let mut args = self.compose_base_args(override_file);
+        args.extend([
+            "exec".to_string(),
+            "-u".to_string(),
+            self.user.clone(),
+            "-w".to_string(),
+            self.workspace_folder.clone(),
+            self.service.clone(),
+            prog.to_string(),
+        ]);
+        args.extend(extra.iter().map(|s| (*s).to_string()));
+        args
+    }
 }
 
 impl Provider for PodmanCompose {
     fn build(&self, use_cache: bool) -> Result<bool> {
         let guard = self.create_docker_compose()?;
-
         let mut command = Command::new(&self.command);
-        command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&guard.0)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("build");
-
-        if !use_cache {
-            command.arg("--no-cache");
-        }
-
-        for (key, value) in &self.build_args {
-            command.arg("--build-arg").arg(format!("{key}={value}"));
-        }
-
+        command.args(self.build_command_args(&guard.0, use_cache));
         print_command(&command);
-
         Ok(command.status()?.success())
     }
 
@@ -99,80 +174,33 @@ impl Provider for PodmanCompose {
 
     fn start(&self) -> Result<bool> {
         let guard = self.create_docker_compose()?;
-
         let mut command = Command::new(&self.command);
-        command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&guard.0)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("up")
-            .arg("--detach");
-
+        command.args(self.start_command_args(&guard.0));
         print_command(&command);
-
         Ok(command.status()?.success())
     }
 
     fn stop(&self) -> Result<bool> {
         let guard = self.create_docker_compose()?;
-
         let mut command = Command::new(&self.command);
-        command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&guard.0)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("stop");
-
+        command.args(self.stop_command_args(&guard.0));
         print_command(&command);
-
         Ok(command.status()?.success())
     }
 
     fn restart(&self) -> Result<bool> {
         let guard = self.create_docker_compose()?;
-
         let mut command = Command::new(&self.command);
-        command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&guard.0)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("restart");
-
+        command.args(self.restart_command_args(&guard.0));
         print_command(&command);
-
         Ok(command.status()?.success())
     }
 
     fn attach(&self) -> Result<bool> {
         let guard = self.create_docker_compose()?;
-
         let mut command = Command::new(&self.command);
-        command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&guard.0)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("exec")
-            .arg("-u")
-            .arg(&self.user)
-            .arg("-w")
-            .arg(&self.workspace_folder)
-            .arg(&self.service)
-            .arg(&self.shell);
-
+        command.args(self.attach_command_args(&guard.0));
         print_command(&command);
-
         Ok(command.status()?.success())
     }
 
@@ -260,27 +288,9 @@ impl Provider for PodmanCompose {
 
     fn exec(&self, cmd: String) -> Result<()> {
         let guard = self.create_docker_compose()?;
-
         let mut command = Command::new(&self.command);
-        command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&guard.0)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("exec")
-            .arg("-u")
-            .arg(&self.user)
-            .arg("-w")
-            .arg(&self.workspace_folder)
-            .arg(&self.service)
-            .arg("sh")
-            .arg("-c")
-            .arg(cmd);
-
+        command.args(self.exec_command_args(&guard.0, &cmd));
         print_command(&command);
-
         let status = command.status()?;
         if status.success() {
             Ok(())
@@ -294,26 +304,9 @@ impl Provider for PodmanCompose {
 
     fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<()> {
         let guard = self.create_docker_compose()?;
-
         let mut command = Command::new(&self.command);
-        command
-            .arg("-f")
-            .arg(&self.file)
-            .arg("-f")
-            .arg(&guard.0)
-            .arg("-p")
-            .arg(&self.name)
-            .arg("exec")
-            .arg("-u")
-            .arg(&self.user)
-            .arg("-w")
-            .arg(&self.workspace_folder)
-            .arg(&self.service)
-            .arg(prog)
-            .args(args);
-
+        command.args(self.exec_raw_command_args(&guard.0, prog, args));
         print_command(&command);
-
         let status = command.status()?;
         if status.success() {
             Ok(())
@@ -436,5 +429,176 @@ mod tests {
         let args = p.rm_args(Path::new("/override.yml"));
         let p_idx = args.iter().position(|a| a == "-p").expect("-p missing");
         assert_eq!(args[p_idx + 1], "projname");
+    }
+
+    // --- compose_base_args ---
+
+    #[test]
+    fn compose_base_args_includes_compose_file() {
+        let p = make_provider("proj", "svc");
+        let args = p.compose_base_args(Path::new("/override.yml"));
+        let idx = args.iter().position(|a| a == "-f").expect("-f missing");
+        assert_eq!(args[idx + 1], "docker-compose.yml");
+    }
+
+    #[test]
+    fn compose_base_args_includes_override_file() {
+        let p = make_provider("proj", "svc");
+        let args = p.compose_base_args(Path::new("/my/override.yml"));
+        let positions: Vec<usize> = args
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| *a == "-f")
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(positions.len(), 2, "must have two -f flags");
+        assert_eq!(args[positions[1] + 1], "/my/override.yml");
+    }
+
+    #[test]
+    fn compose_base_args_includes_project_name() {
+        let p = make_provider("myproj", "svc");
+        let args = p.compose_base_args(Path::new("/override.yml"));
+        let idx = args.iter().position(|a| a == "-p").expect("-p missing");
+        assert_eq!(args[idx + 1], "myproj");
+    }
+
+    // --- build_command_args ---
+
+    #[test]
+    fn build_command_args_includes_build_subcommand() {
+        let p = make_provider("proj", "svc");
+        let args = p.build_command_args(Path::new("/override.yml"), true);
+        assert!(args.iter().any(|a| a == "build"), "must include 'build'");
+    }
+
+    #[test]
+    fn build_command_args_no_cache_flag() {
+        let p = make_provider("proj", "svc");
+        let args = p.build_command_args(Path::new("/override.yml"), false);
+        assert!(
+            args.iter().any(|a| a == "--no-cache"),
+            "must include --no-cache"
+        );
+    }
+
+    #[test]
+    fn build_command_args_with_cache_no_no_cache_flag() {
+        let p = make_provider("proj", "svc");
+        let args = p.build_command_args(Path::new("/override.yml"), true);
+        assert!(
+            !args.iter().any(|a| a == "--no-cache"),
+            "must not include --no-cache"
+        );
+    }
+
+    #[test]
+    fn build_command_args_includes_build_arg_flags() {
+        let mut p = make_provider("proj", "svc");
+        p.build_args.insert("FOO".to_string(), "bar".to_string());
+        let args = p.build_command_args(Path::new("/override.yml"), true);
+        let idx = args
+            .iter()
+            .position(|a| a == "--build-arg")
+            .expect("--build-arg missing");
+        assert_eq!(args[idx + 1], "FOO=bar");
+    }
+
+    // --- start_command_args ---
+
+    #[test]
+    fn start_command_args_includes_up_detach() {
+        let p = make_provider("proj", "svc");
+        let args = p.start_command_args(Path::new("/override.yml"));
+        assert!(args.iter().any(|a| a == "up"), "must include 'up'");
+        assert!(
+            args.iter().any(|a| a == "--detach"),
+            "must include '--detach'"
+        );
+    }
+
+    // --- stop_command_args ---
+
+    #[test]
+    fn stop_command_args_includes_stop_subcommand() {
+        let p = make_provider("proj", "svc");
+        let args = p.stop_command_args(Path::new("/override.yml"));
+        assert!(args.iter().any(|a| a == "stop"), "must include 'stop'");
+    }
+
+    // --- restart_command_args ---
+
+    #[test]
+    fn restart_command_args_includes_restart_subcommand() {
+        let p = make_provider("proj", "svc");
+        let args = p.restart_command_args(Path::new("/override.yml"));
+        assert!(
+            args.iter().any(|a| a == "restart"),
+            "must include 'restart'"
+        );
+    }
+
+    // --- attach_command_args ---
+
+    #[test]
+    fn attach_command_args_includes_exec_and_service() {
+        let p = make_provider("proj", "app");
+        let args = p.attach_command_args(Path::new("/override.yml"));
+        assert!(args.iter().any(|a| a == "exec"), "must include 'exec'");
+        assert!(args.iter().any(|a| a == "app"), "must include service name");
+    }
+
+    #[test]
+    fn attach_command_args_includes_shell() {
+        let p = make_provider("proj", "svc");
+        let args = p.attach_command_args(Path::new("/override.yml"));
+        assert!(args.iter().any(|a| a == "/bin/bash"), "must include shell");
+    }
+
+    #[test]
+    fn attach_command_args_includes_user_and_workspace() {
+        let p = make_provider("proj", "svc");
+        let args = p.attach_command_args(Path::new("/override.yml"));
+        let u_idx = args.iter().position(|a| a == "-u").expect("-u missing");
+        assert_eq!(args[u_idx + 1], "vscode");
+        let w_idx = args.iter().position(|a| a == "-w").expect("-w missing");
+        assert_eq!(args[w_idx + 1], "/workspace");
+    }
+
+    // --- exec_command_args ---
+
+    #[test]
+    fn exec_command_args_passes_cmd_via_sh_c() {
+        let p = make_provider("proj", "svc");
+        let args = p.exec_command_args(Path::new("/override.yml"), "npm install");
+        // Must end with sh -c <cmd>
+        let len = args.len();
+        assert!(len >= 3);
+        assert_eq!(args[len - 3], "sh");
+        assert_eq!(args[len - 2], "-c");
+        assert_eq!(args[len - 1], "npm install");
+    }
+
+    // --- exec_raw_command_args ---
+
+    #[test]
+    fn exec_raw_command_args_places_prog_after_service() {
+        let p = make_provider("proj", "svc");
+        let args = p.exec_raw_command_args(Path::new("/override.yml"), "myprogram", &["--flag"]);
+        // service comes before prog
+        let svc_idx = args
+            .iter()
+            .position(|a| a == "svc")
+            .expect("service missing");
+        assert_eq!(args[svc_idx + 1], "myprogram");
+        assert_eq!(args[svc_idx + 2], "--flag");
+    }
+
+    #[test]
+    fn exec_raw_command_args_no_sh_wrapper() {
+        let p = make_provider("proj", "svc");
+        let args = p.exec_raw_command_args(Path::new("/override.yml"), "myprog", &[]);
+        assert!(!args.iter().any(|a| a == "sh"), "exec_raw must not use sh");
+        assert!(!args.iter().any(|a| a == "-c"), "exec_raw must not use -c");
     }
 }

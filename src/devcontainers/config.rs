@@ -479,6 +479,92 @@ mod tests {
     }
 
     #[test]
+    fn safe_name_digit_start_is_valid_without_dev_prefix() {
+        let config = Config {
+            name: "1myproject".to_string(),
+            image: None,
+            build: None,
+            forward_ports: vec![],
+            initialize_command: None,
+            on_create_command: None,
+            update_content_command: None,
+            post_create_command: None,
+            post_start_command: None,
+            post_attach_command: None,
+            remote_user: "root".to_string(),
+            run_args: vec![],
+            override_command: false,
+            mounts: None,
+            remote_env: std::collections::HashMap::new(),
+            docker_compose_file: None,
+            service: None,
+            selinux_relabel: None,
+            workspace_folder: "/workspace".to_string(),
+            shutdown_action: ShutdownAction::default(),
+        };
+        let name = config.safe_name().expect("digit-start should succeed");
+        assert!(
+            name.starts_with("devcont-1"),
+            "digit-start name should not have 'dev-' inserted, got: {name}"
+        );
+    }
+
+    // --- Config::parse error paths ---
+
+    #[test]
+    fn config_parse_nonexistent_file_returns_io_error() {
+        use crate::error::Error;
+        let result = Config::parse(Path::new("/nonexistent/devcon/devcontainer.json"));
+        assert!(result.is_err(), "nonexistent file should return Err");
+        assert!(
+            matches!(result.unwrap_err(), Error::Io(_)),
+            "nonexistent file error should be Error::Io"
+        );
+    }
+
+    #[test]
+    fn config_parse_invalid_json5_returns_config_parse_error() {
+        use crate::error::Error;
+        let dir = std::env::temp_dir();
+        let path = dir.join("devcont_test_invalid.json");
+        std::fs::write(&path, "{ not : valid : json }").expect("write test file");
+        let result = Config::parse(&path);
+        let _ = std::fs::remove_file(&path);
+        assert!(result.is_err(), "invalid JSON5 should return Err");
+        assert!(
+            matches!(result.unwrap_err(), Error::ConfigParse(_)),
+            "invalid JSON5 error should be Error::ConfigParse"
+        );
+    }
+
+    #[test]
+    fn config_parse_missing_required_name_returns_error() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("devcont_test_noname.json");
+        std::fs::write(&path, r#"{ "image": "alpine" }"#).expect("write test file");
+        let result = Config::parse(&path);
+        let _ = std::fs::remove_file(&path);
+        assert!(
+            result.is_err(),
+            "config without 'name' field should return Err"
+        );
+    }
+
+    #[test]
+    fn config_parse_unknown_fields_ignored() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("devcont_test_unknown.json");
+        std::fs::write(
+            &path,
+            r#"{ "name": "myproject", "image": "alpine", "unknownField": true }"#,
+        )
+        .expect("write test file");
+        let result = Config::parse(&path);
+        let _ = std::fs::remove_file(&path);
+        assert!(result.is_ok(), "unknown fields should be silently ignored");
+    }
+
+    #[test]
     fn safe_name_prepends_dev_when_starts_with_dash() {
         let config = Config {
             name: "-myproject".to_string(),

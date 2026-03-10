@@ -1000,4 +1000,63 @@ mod tests {
     fn root_user_suppressed_with_no_root_check() {
         assert!(!should_warn_root("root", true));
     }
+
+    // --- exec_host_hook ---
+
+    #[test]
+    fn exec_host_hook_one_exits_zero_returns_true() {
+        let hook = OneOrMany::One("true".to_string());
+        let result = exec_host_hook(&hook).expect("sh -c true should succeed");
+        assert!(result, "exit 0 → should return true");
+    }
+
+    #[test]
+    fn exec_host_hook_one_exits_nonzero_returns_false() {
+        let hook = OneOrMany::One("false".to_string());
+        let result = exec_host_hook(&hook).expect("sh -c false should not error");
+        assert!(!result, "exit 1 → should return false");
+    }
+
+    #[test]
+    fn exec_host_hook_many_exits_zero_returns_true() {
+        let hook = OneOrMany::Many(vec!["true".to_string()]);
+        let result = exec_host_hook(&hook).expect("true binary should succeed");
+        assert!(result, "Many([true]) exit 0 → should return true");
+    }
+
+    #[test]
+    fn exec_host_hook_many_exits_nonzero_returns_false() {
+        let hook = OneOrMany::Many(vec!["false".to_string()]);
+        let result = exec_host_hook(&hook).expect("false binary should not error");
+        assert!(!result, "Many([false]) exit 1 → should return false");
+    }
+
+    #[test]
+    fn exec_host_hook_many_empty_returns_true() {
+        let hook = OneOrMany::Many(vec![]);
+        let result = exec_host_hook(&hook).expect("empty Many hook should succeed");
+        assert!(
+            result,
+            "empty Many hook should return true without executing anything"
+        );
+    }
+
+    #[test]
+    fn exec_host_hook_nonexistent_command_returns_err() {
+        let hook = OneOrMany::Many(vec!["__nonexistent_devcont_cmd_xyz_42__".to_string()]);
+        let result = exec_host_hook(&hook);
+        assert!(
+            result.is_err(),
+            "nonexistent command should return Err, not Ok"
+        );
+    }
+
+    #[test]
+    fn exec_host_hook_many_preserves_space_in_arg() {
+        // The arg "hello world" must reach echo as a single argument (not split).
+        // If echo receives it as one arg it prints "hello world" and exits 0.
+        let hook = OneOrMany::Many(vec!["echo".to_string(), "hello world".to_string()]);
+        let result = exec_host_hook(&hook).expect("echo with space arg should succeed");
+        assert!(result, "echo with space-containing arg should exit 0");
+    }
 }
