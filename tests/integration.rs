@@ -14,6 +14,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use devcont::provider::Provider;
 use devcont::provider::docker::{BuildSource, Docker};
 use devcont::provider::docker_compose::DockerCompose;
+use devcont::provider::options::ContainerOptions;
 use devcont::provider::podman::Podman;
 use devcont::provider::podman_compose::PodmanCompose;
 
@@ -453,7 +454,9 @@ fn test_docker_build_and_create() {
         "build() should succeed"
     );
     assert!(
-        provider.create(vec![]).expect("create() failed"),
+        provider
+            .create(&ContainerOptions { remote_env: vec![] })
+            .expect("create() failed"),
         "create() should succeed"
     );
     assert!(
@@ -472,7 +475,9 @@ fn test_docker_start_and_running() {
     let _image_guard = ImageGuard::new(&image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     assert!(
         provider.start().expect("start() failed"),
         "start() should succeed"
@@ -493,7 +498,9 @@ fn test_docker_running_returns_false_when_stopped() {
     let _image_guard = ImageGuard::new(&image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
     assert!(
         provider.stop().expect("stop() failed"),
@@ -515,7 +522,9 @@ fn test_docker_restart() {
     let _image_guard = ImageGuard::new(&image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
     assert!(
         provider.restart().expect("restart() failed"),
@@ -537,7 +546,9 @@ fn test_docker_exec() {
     let _image_guard = ImageGuard::new(&image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
     provider
         .exec("echo hello".to_string())
@@ -554,7 +565,9 @@ fn test_docker_cp() {
     let _image_guard = ImageGuard::new(&image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
 
     // Write a temp file into the workspace tmp/ directory.
@@ -589,7 +602,9 @@ fn test_docker_stop_and_rm() {
     let _image_guard = ImageGuard::new(&image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
     provider.stop().expect("stop() failed");
     assert!(provider.rm().expect("rm() failed"), "rm() should succeed");
@@ -626,7 +641,9 @@ fn test_compose_build_and_start() {
         "build() should succeed"
     );
     assert!(
-        provider.create(vec![]).expect("create() failed"),
+        provider
+            .create(&ContainerOptions { remote_env: vec![] })
+            .expect("create() failed"),
         "create() should succeed (no-op for compose)"
     );
     assert!(
@@ -751,7 +768,9 @@ fn test_podman_build_and_create() {
         "build() should succeed"
     );
     assert!(
-        provider.create(vec![]).expect("create() failed"),
+        provider
+            .create(&ContainerOptions { remote_env: vec![] })
+            .expect("create() failed"),
         "create() should succeed"
     );
     assert!(
@@ -769,7 +788,9 @@ fn test_podman_start_and_running() {
     let _guard = PodmanGuard::new(&name, &image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     assert!(
         provider.start().expect("start() failed"),
         "start() should succeed"
@@ -789,7 +810,9 @@ fn test_podman_running_returns_false_when_stopped() {
     let _guard = PodmanGuard::new(&name, &image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
     assert!(
         provider.stop().expect("stop() failed"),
@@ -810,7 +833,9 @@ fn test_podman_restart() {
     let _guard = PodmanGuard::new(&name, &image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
     assert!(
         provider.restart().expect("restart() failed"),
@@ -831,7 +856,9 @@ fn test_podman_exec() {
     let _guard = PodmanGuard::new(&name, &image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
     provider
         .exec("echo hello".to_string())
@@ -847,7 +874,9 @@ fn test_podman_cp() {
     let _guard = PodmanGuard::new(&name, &image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
 
     let tmp_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tmp");
@@ -878,7 +907,9 @@ fn test_podman_stop_and_rm() {
     let _guard = PodmanGuard::new(&name, &image);
 
     provider.build(true).expect("build() failed");
-    provider.create(vec![]).expect("create() failed");
+    provider
+        .create(&ContainerOptions { remote_env: vec![] })
+        .expect("create() failed");
     provider.start().expect("start() failed");
     provider.stop().expect("stop() failed");
     assert!(provider.rm().expect("rm() failed"), "rm() should succeed");
@@ -923,7 +954,9 @@ fn test_podman_compose_build_and_start() {
         "build() should succeed"
     );
     assert!(
-        provider.create(vec![]).expect("create() failed"),
+        provider
+            .create(&ContainerOptions { remote_env: vec![] })
+            .expect("create() failed"),
         "create() should succeed (no-op for compose)"
     );
     assert!(

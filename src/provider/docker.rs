@@ -4,6 +4,7 @@ use std::io::Result;
 use std::process::Command;
 
 use super::Provider;
+use super::options::ContainerOptions;
 use super::print_command;
 
 const IMAGE_NAMESPACE: &str = "devcont";
@@ -70,7 +71,7 @@ impl Provider for Docker {
         }
     }
 
-    fn create(&self, args: Vec<String>) -> Result<bool> {
+    fn create(&self, opts: &ContainerOptions) -> Result<bool> {
         let image = match &self.build_source {
             BuildSource::Dockerfile(_) => format!("{IMAGE_NAMESPACE}/{}", &self.name),
             BuildSource::Image(name) => name.clone(),
@@ -96,8 +97,8 @@ impl Provider for Docker {
             command.arg("--publish").arg(format!("{port}:{port}"));
         }
 
-        for arg in &args {
-            command.arg(arg);
+        for (key, value) in &opts.remote_env {
+            command.arg("--env").arg(format!("{key}={value}"));
         }
 
         for arg in &self.run_args {

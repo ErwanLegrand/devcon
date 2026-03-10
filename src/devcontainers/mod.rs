@@ -8,6 +8,7 @@ use crate::error::{Error, Result};
 use crate::provider::Provider;
 use crate::provider::docker::{BuildSource, Docker};
 use crate::provider::docker_compose::DockerCompose;
+use crate::provider::options::ContainerOptions;
 use crate::provider::podman::Podman;
 use crate::provider::podman_compose::PodmanCompose;
 use crate::provider::utils::resolve_dockerfile_path;
@@ -138,21 +139,20 @@ impl Devcontainer {
     /// # Errors
     /// Returns an error if any provider operation (build, start, attach, etc.) fails.
     pub fn run(&self, use_cache: bool, trust: bool, no_root_check: bool) -> Result<()> {
-        run_args::validate_run_args(&self.config.run_args)
-            .map_err(Error::InvalidConfig)?;
+        run_args::validate_run_args(&self.config.run_args).map_err(Error::InvalidConfig)?;
 
         let container_name = self.config.safe_name()?;
-        run_args::validate_container_name(&container_name)
-            .map_err(Error::InvalidConfig)?;
+        run_args::validate_container_name(&container_name).map_err(Error::InvalidConfig)?;
 
-        run_args::validate_remote_env(&self.config.remote_env)
-            .map_err(Error::InvalidConfig)?;
+        run_args::validate_remote_env(&self.config.remote_env).map_err(Error::InvalidConfig)?;
 
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.initialize_command {
             if !confirm_and_run_host_hook(hook, trust)? {
-                return Err(Error::HookFailed("initializeCommand declined by user".to_string()));
+                return Err(Error::HookFailed(
+                    "initializeCommand declined by user".to_string(),
+                ));
             }
         }
 
@@ -191,12 +191,7 @@ impl Devcontainer {
     ///
     /// # Errors
     /// Returns an error if stopping, removing, or restarting the container fails.
-    pub fn rebuild(
-        &self,
-        use_cache: bool,
-        trust: bool,
-        no_root_check: bool,
-    ) -> Result<()> {
+    pub fn rebuild(&self, use_cache: bool, trust: bool, no_root_check: bool) -> Result<()> {
         let provider = &self.provider;
         if provider.exists()? {
             provider.stop()?;
@@ -211,7 +206,10 @@ impl Devcontainer {
 
         if !provider.exists()? {
             provider.build(use_cache)?;
-            provider.create(self.create_args())?;
+            let opts = ContainerOptions {
+                remote_env: sorted_env_vars(&self.config),
+            };
+            provider.create(&opts)?;
         }
 
         Ok(())
@@ -254,11 +252,12 @@ impl Devcontainer {
             // Shell-quote the path to handle spaces and special characters safely.
             let basedir_quoted = format!("'{}'", basedir.replace('\'', r"'\''"));
             provider.exec(format!("mkdir -p -- {basedir_quoted}"))?;
-            provider.cp(
-                source.to_string_lossy().to_string(),
-                destination.to_string(),
-            )
-            .map_err(Into::into)
+            provider
+                .cp(
+                    source.to_string_lossy().to_string(),
+                    destination.to_string(),
+                )
+                .map_err(Into::into)
         } else {
             Err(Error::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
@@ -302,28 +301,6 @@ impl Devcontainer {
         let dest_str = dest.to_string_lossy();
         self.copy(&file, &dest_str)
     }
-
-    /// Build the list of extra arguments passed to the container create command
-    /// (environment variables, working directory, and `runArgs` from config).
-    #[must_use]
-    pub fn create_args(&self) -> Vec<String> {
-        let mut args = vec![];
-
-        for (key, value) in &self.config.remote_env {
-            args.push("-e".to_string());
-            args.push(format!("{key}={value}"));
-        }
-
-        let workspace_folder = self.config.workspace_folder.clone();
-        args.push("-w".to_string());
-        args.push(workspace_folder);
-
-        for arg in self.config.run_args.clone() {
-            args.push(arg);
-        }
-
-        args
-    }
 }
 
 fn missing_field(field: &str) -> Error {
@@ -342,10 +319,7 @@ fn sorted_env_vars(config: &Config) -> Vec<(String, String)> {
     env_vars
 }
 
-fn compose_path_and_service(
-    directory: &Path,
-    config: &Config,
-) -> Result<(String, String)> {
+fn compose_path_and_service(directory: &Path, config: &Config) -> Result<(String, String)> {
     let compose_file = config
         .docker_compose_file
         .as_deref()
@@ -600,7 +574,7 @@ mod tests {
             *self.build_calls.borrow_mut() += 1;
             Ok(true)
         }
-        fn create(&self, _: Vec<String>) -> std::io::Result<bool> {
+        fn create(&self, _: &crate::provider::options::ContainerOptions) -> std::io::Result<bool> {
             Ok(true)
         }
         fn start(&self) -> std::io::Result<bool> {

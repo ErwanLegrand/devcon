@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn deserialize_empty_string_is_one() {
         let v: OneOrMany = json5::from_str(r#""""#).expect("empty string should parse");
-        assert_eq!(v, OneOrMany::One("".to_string()));
+        assert_eq!(v, OneOrMany::One(String::new()));
     }
 
     #[test]

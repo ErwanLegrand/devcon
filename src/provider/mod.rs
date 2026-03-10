@@ -1,10 +1,12 @@
 pub mod docker;
 pub mod docker_compose;
+pub mod options;
 pub mod podman;
 pub mod podman_compose;
 pub(crate) mod utils;
 
 use colored::Colorize;
+use options::ContainerOptions;
 use std::io::Result;
 
 /// Abstraction over container engine backends (Docker, Podman, Compose variants).
@@ -14,11 +16,11 @@ pub trait Provider {
     /// # Errors
     /// Returns an error if the underlying build command fails to spawn or exits with an error.
     fn build(&self, use_cache: bool) -> Result<bool>;
-    /// Create the container with the given extra arguments.
+    /// Create the container with the given options.
     ///
     /// # Errors
     /// Returns an error if the underlying create command fails to spawn or exits with an error.
-    fn create(&self, args: Vec<String>) -> Result<bool>;
+    fn create(&self, opts: &ContainerOptions) -> Result<bool>;
     /// Start a stopped container.
     ///
     /// # Errors

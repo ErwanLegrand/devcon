@@ -4,6 +4,7 @@ use std::path::Path;
 use std::process::Command;
 
 use super::Provider;
+use super::options::ContainerOptions;
 use super::print_command;
 use super::utils::{ComposeOverrideGuard, create_compose_override};
 
@@ -169,7 +170,7 @@ impl Provider for PodmanCompose {
         Ok(command.status()?.success())
     }
 
-    fn create(&self, _args: Vec<String>) -> Result<bool> {
+    fn create(&self, _opts: &ContainerOptions) -> Result<bool> {
         Ok(true)
     }
 
