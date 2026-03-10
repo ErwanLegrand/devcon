@@ -127,14 +127,14 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### High Security
 
-## [ ] Track: Security — Require User Confirmation Before Running initializeCommand on Host
+## [x] Track: Security — Require User Confirmation Before Running initializeCommand on Host
 *Show `initializeCommand` to the user and require `y` confirmation (or `--trust` flag) before executing on the host. Mirrors VS Code Dev Containers behavior.*
 *Priority: High. From: arch_review_stride.*
 *Link: [./tracks/sec_host_hook_confirmation_20260309/](./tracks/sec_host_hook_confirmation_20260309/)*
 
 ---
 
-## [ ] Track: Security — Warn When Container Runs as Root With No remoteUser Configured
+## [x] Track: Security — Warn When Container Runs as Root With No remoteUser Configured
 *Inspect container user after creation; emit a prominent warning when root with no remoteUser set. Non-fatal. Suppressible with `--no-root-check`.*
 *Priority: High. From: arch_review_stride.*
 *Link: [./tracks/sec_default_user_20260309/](./tracks/sec_default_user_20260309/)*
@@ -143,28 +143,28 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### High Correctness
 
-## [ ] Track: Fix — Propagate Non-Zero Exit From In-Container Lifecycle Hooks
+## [x] Track: Fix — Propagate Non-Zero Exit From In-Container Lifecycle Hooks
 *Check exec_hook return value for postCreateCommand, postStartCommand, postAttachCommand in run() and rebuild(). Abort with named error on Ok(false).*
 *Priority: High. From: code_review_thorough.*
 *Link: [./tracks/fix_hook_exit_propagation_20260309/](./tracks/fix_hook_exit_propagation_20260309/)*
 
 ---
 
-## [ ] Track: Fix — Container Name Filter in exists() and running() is Too Broad
+## [x] Track: Fix — Container Name Filter in exists() and running() is Too Broad
 *`--filter name=` is a substring match; use anchored regex or exact comparison. Fixes false-positives for containers with similar names.*
 *Priority: High. From: code_review_thorough.*
 *Link: [./tracks/fix_container_name_filter_20260309/](./tracks/fix_container_name_filter_20260309/)*
 
 ---
 
-## [ ] Track: Fix — Dockerfile Path Resolution Asymmetry Between Docker and Podman
+## [x] Track: Fix — Dockerfile Path Resolution Asymmetry Between Docker and Podman
 *Extract `resolve_dockerfile_path` helper and use it uniformly across all four providers. Relative paths must resolve relative to build.context.*
 *Priority: High. From: code_review_thorough.*
 *Link: [./tracks/fix_dockerfile_path_asymmetry_20260309/](./tracks/fix_dockerfile_path_asymmetry_20260309/)*
 
 ---
 
-## [ ] Track: Fix — DockerCompose exists() Uses Wrong Container Name Source
+## [x] Track: Fix — DockerCompose exists() Uses Wrong Container Name Source
 *Use `docker compose ps` output rather than a guessed name to detect container existence in DockerCompose and PodmanCompose.*
 *Priority: High. From: code_review_thorough.*
 *Link: [./tracks/fix_docker_compose_exists_20260309/](./tracks/fix_docker_compose_exists_20260309/)*
