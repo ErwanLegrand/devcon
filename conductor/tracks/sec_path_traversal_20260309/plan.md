@@ -2,39 +2,38 @@
 
 ## Phase 1: Path Validation Helper
 
-- [ ] Task: Create `src/devcontainers/paths.rs`
-    - [ ] Implement `fn validate_within_root(root: &Path, candidate: &Path) -> io::Result<PathBuf>`
-    - [ ] Normalise candidate (resolve `..` components without requiring path to exist)
-    - [ ] Return error if normalised path does not start with `root`
-    - [ ] `cargo build` must pass
+- [x] Task: Create `src/devcontainers/paths.rs`
+    - [x] Implement `fn validate_within_root(root: &Path, candidate: &Path) -> io::Result<PathBuf>`
+    - [x] Normalise candidate (resolve `..` components without requiring path to exist)
+    - [x] Return error if normalised path does not start with `root`
+    - [x] `cargo build` must pass
 
 ## Phase 2: Wire Into Config Loading
 
-- [ ] Task: Validate `build.dockerfile` and `build.context`
-    - [ ] In `Devcontainer::load()` or provider build methods, call `validate_within_root`
-          for dockerfile path and context path
-    - [ ] Abort with descriptive error if traversal detected
-    - [ ] `cargo build` must pass
-- [ ] Task: Validate `mounts[].source` for relative paths
-    - [ ] Relative `mounts` source paths must be validated within workspace root
-    - [ ] Absolute paths emit a one-line info log and pass through
-    - [ ] `cargo build` must pass
-    - [ ] Commit: `fix(security): validate dockerfile/context/mounts paths against traversal`
+- [x] Task: Validate `build.dockerfile` and `build.context`
+    - [x] In provider build methods, call `validate_within_root` for dockerfile and context paths
+    - [x] Abort with descriptive error if traversal detected
+    - [x] `cargo build` must pass
+- [x] Task: Validate `mounts[].source` for relative paths
+    - [x] Relative `mounts` source paths must be validated within workspace root
+    - [x] Absolute paths pass through
+    - [x] `cargo build` must pass
+    - [x] Commit: `fix(security): validate dockerfile/context/mounts paths against traversal`
 
 ## Phase 3: Tests
 
-- [ ] Task: Unit tests for `validate_within_root`
-    - [ ] Normal relative path within root: OK
-    - [ ] `../sibling` escaping root: error
-    - [ ] `../../etc/passwd`: error
-    - [ ] Absolute path inside root: OK
-    - [ ] Symlink resolving outside root: error (if symlink exists at test time)
-    - [ ] `cargo test` must pass
-    - [ ] Commit: `test(security): path traversal prevention`
+- [x] Task: Unit tests for `validate_within_root`
+    - [x] Normal relative path within root: OK
+    - [x] `../sibling` escaping root: error
+    - [x] `../../etc/passwd`: error
+    - [x] Absolute path inside root: OK
+    - [x] Absolute path outside root: error
+    - [x] `cargo test` must pass
+    - [x] Commit: `test(security): path traversal prevention`
 
 ## Phase 4: Quality Gate
 
-- [ ] Task: Full quality gate
-    - [ ] `cargo test`
-    - [ ] `cargo clippy --all-targets -- -D warnings`
-    - [ ] `cargo fmt --check`
+- [x] Task: Full quality gate
+    - [x] `cargo test`
+    - [x] `cargo clippy --all-targets -- -D warnings`
+    - [x] `cargo fmt --check`

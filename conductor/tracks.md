@@ -104,21 +104,21 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Critical Security
 
-## [ ] Track: Security — Validate runArgs Against Allowlist
+## [x] Track: Security — Validate runArgs Against Allowlist
 *Validate `runArgs` from devcontainer.json against a privilege-escalation denylist before passing to container runtime. Abort on `--privileged`, `--cap-add`, etc.*
 *Priority: Critical. From: arch_review_stride + code_review_thorough.*
 *Link: [./tracks/sec_runargs_allowlist_20260309/](./tracks/sec_runargs_allowlist_20260309/)*
 
 ---
 
-## [ ] Track: Security — Fix Compose Override Temp File Permissions and Cleanup
+## [x] Track: Security — Fix Compose Override Temp File Permissions and Cleanup
 *Create compose override file with mode 0o600 and auto-delete via Drop guard. Prevents information disclosure of SSH socket paths and env var values.*
 *Priority: Critical. From: arch_review_stride + code_review_thorough.*
 *Link: [./tracks/sec_tempfile_secret_20260309/](./tracks/sec_tempfile_secret_20260309/)*
 
 ---
 
-## [ ] Track: Security — Prevent Path Traversal in Workspace and Dockerfile Paths
+## [x] Track: Security — Prevent Path Traversal in Workspace and Dockerfile Paths
 *Canonicalise and validate build.dockerfile, build.context, and relative mounts paths so they cannot escape the workspace root.*
 *Priority: Critical. From: arch_review_stride + code_review_thorough.*
 *Link: [./tracks/sec_path_traversal_20260309/](./tracks/sec_path_traversal_20260309/)*
