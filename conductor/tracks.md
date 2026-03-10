@@ -187,7 +187,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Security — Add SELinux Label Support for Podman SSH Socket Mount
+## [x] Track: Security — Add SELinux Label Support for Podman SSH Socket Mount
 *Auto-detect SELinux enforcing mode; append `:z` to SSH socket volume mount in compose override. Override via `selinuxRelabel` config field.*
 *Priority: Medium. From: arch_review_stride.*
 *Link: [./tracks/sec_podman_selinux_20260309/](./tracks/sec_podman_selinux_20260309/)*
@@ -196,7 +196,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Medium Correctness
 
-## [ ] Track: Fix — Podman Providers Missing mounts and remoteEnv Support
+## [x] Track: Fix — Podman Providers Missing mounts and remoteEnv Support
 *Implement `mounts` and `remoteEnv` in Podman::create() and PodmanCompose override template, matching Docker provider behavior.*
 *Priority: Medium. From: code_review_thorough.*
 *Link: [./tracks/fix_podman_mounts_parity_20260309/](./tracks/fix_podman_mounts_parity_20260309/)*
@@ -251,21 +251,21 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Low Priority
 
-## [ ] Track: Refactor — Tighten Provider Module Visibility
+## [x] Track: Refactor — Tighten Provider Module Visibility
 *Change pub → pub(crate) or private for all items used only within the crate. Resolves dead_code warnings. No behavioral changes.*
 *Priority: Low. From: code_review_thorough.*
 *Link: [./tracks/refactor_provider_visibility_20260309/](./tracks/refactor_provider_visibility_20260309/)*
 
 ---
 
-## [ ] Track: Fix — Settings Load Silently Falls Back on Any Error
+## [x] Track: Fix — Settings Load Silently Falls Back on Any Error
 *Distinguish "file not found" (Ok default) from "file exists but invalid" (Err with path). Prevents silent config misconfig.*
 *Priority: Low. From: code_review_thorough.*
 *Link: [./tracks/fix_settings_error_handling_20260309/](./tracks/fix_settings_error_handling_20260309/)*
 
 ---
 
-## [ ] Track: Fix — safe_name() Silently Truncates Unicode
+## [x] Track: Fix — safe_name() Silently Truncates Unicode
 *Return error with helpful message when workspace path produces empty container name. Prepend "dev-" if name starts with non-alphanumeric.*
 *Priority: Low. From: code_review_thorough.*
 *Link: [./tracks/fix_safe_name_validation_20260309/](./tracks/fix_safe_name_validation_20260309/)*
