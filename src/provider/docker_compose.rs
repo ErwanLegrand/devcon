@@ -4,7 +4,7 @@ use std::process::Command;
 
 use super::Provider;
 use super::print_command;
-use super::utils::create_compose_override;
+use super::utils::{ComposeOverrideGuard, create_compose_override};
 
 #[derive(Debug)]
 pub struct DockerCompose {
@@ -20,14 +20,14 @@ pub struct DockerCompose {
 }
 
 impl DockerCompose {
-    fn create_docker_compose(&self) -> Result<String> {
+    fn create_docker_compose(&self) -> Result<ComposeOverrideGuard> {
         create_compose_override(&self.service, &self.env_vars)
     }
 }
 
 impl Provider for DockerCompose {
     fn build(&self, use_cache: bool) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
@@ -35,7 +35,7 @@ impl Provider for DockerCompose {
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("build");
@@ -58,14 +58,14 @@ impl Provider for DockerCompose {
     }
 
     fn start(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("up")
@@ -77,14 +77,14 @@ impl Provider for DockerCompose {
     }
 
     fn stop(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("stop");
@@ -95,14 +95,14 @@ impl Provider for DockerCompose {
     }
 
     fn restart(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("restart");
@@ -113,14 +113,14 @@ impl Provider for DockerCompose {
     }
 
     fn attach(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -137,14 +137,14 @@ impl Provider for DockerCompose {
     }
 
     fn rm(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("down")
@@ -199,14 +199,14 @@ impl Provider for DockerCompose {
     }
 
     fn cp(&self, source: String, destination: String) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("cp")
@@ -219,14 +219,14 @@ impl Provider for DockerCompose {
     }
 
     fn exec(&self, cmd: String) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -245,14 +245,14 @@ impl Provider for DockerCompose {
     }
 
     fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
