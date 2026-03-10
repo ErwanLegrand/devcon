@@ -99,9 +99,16 @@ impl Config {
     /// if the content is not valid JSON5 or does not match the expected schema.
     pub fn parse(file: &Path) -> Result<Config> {
         let contents = std::fs::read_to_string(file).map_err(Error::Io)?;
-        let config: Config =
-            json5::from_str(&contents).map_err(|e| Error::ConfigParse(e.to_string()))?;
-        Ok(config)
+        Self::parse_str(&contents)
+    }
+
+    /// Parse a `devcontainer.json` configuration from a raw JSON5 string.
+    ///
+    /// # Errors
+    /// Returns [`Error::ConfigParse`] if the content is not valid JSON5 or does
+    /// not match the expected schema.
+    pub fn parse_str(s: &str) -> Result<Config> {
+        json5::from_str(s).map_err(|e| Error::ConfigParse(e.to_string()))
     }
 
     /// Return the Dockerfile path from the `build` block, if present.

@@ -1,0 +1,62 @@
+# Fuzz Harnesses for devcont
+
+This directory contains [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz) harnesses
+targeting the two highest-ROI parsing surfaces in `devcont`.
+
+## Targets
+
+| Target | Entry point | What it tests |
+|--------|-------------|---------------|
+| `fuzz_config_parse` | `Config::parse_str` | JSON5 parsing of `devcontainer.json` — feeds arbitrary bytes into the `json5` recursive-descent parser |
+| `fuzz_one_or_many` | `OneOrMany::parse_str` | Custom serde `Visitor` that accepts strings or arrays of strings |
+
+## Running Locally
+
+Requires a nightly toolchain (`rustup toolchain add nightly`) and `cargo-fuzz`
+(`cargo install cargo-fuzz`).
+
+```bash
+# Build all targets
+cargo +nightly fuzz build
+
+# Run for 10 minutes (no corpus — will discover seeds automatically)
+cargo +nightly fuzz run fuzz_config_parse -- -max_total_time=600
+
+# Run with existing seed corpus
+cargo +nightly fuzz run fuzz_config_parse fuzz/corpus/fuzz_config_parse -- -max_total_time=600
+cargo +nightly fuzz run fuzz_one_or_many  fuzz/corpus/fuzz_one_or_many  -- -max_total_time=600
+```
+
+## Crash Triage
+
+When cargo-fuzz finds a crash, it writes a minimised reproducer to
+`fuzz/artifacts/<target>/crash-<hash>`.
+
+### 1. Reproduce
+
+```bash
+cargo +nightly fuzz run fuzz_config_parse fuzz/artifacts/fuzz_config_parse/crash-<hash>
+```
+
+### 2. Minimise (optional)
+
+```bash
+cargo +nightly fuzz tmin fuzz_config_parse fuzz/artifacts/fuzz_config_parse/crash-<hash>
+```
+
+### 3. Diagnose
+
+Inspect the minimised input, then add a regression test in the relevant `#[cfg(test)]`
+module (`src/devcontainers/config.rs` or `src/devcontainers/one_or_many.rs`) that
+reproduces the crash. Fix the bug so the test passes.
+
+### 4. Add to corpus
+
+Once fixed, copy the minimised input to the appropriate `fuzz/corpus/<target>/` directory
+so it is included in future fuzz runs.
+
+## CI
+
+A bounded fuzz run (60 s / 100 000 iterations per target) runs on every push and PR
+via `.github/workflows/fuzz.yml`. Crash artifacts are uploaded automatically when a
+target exits non-zero.

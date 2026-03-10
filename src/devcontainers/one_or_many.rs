@@ -13,6 +13,18 @@ pub enum OneOrMany {
 }
 
 impl OneOrMany {
+    /// Parse a JSON5 string into a `OneOrMany` value.
+    ///
+    /// This is a thin wrapper over `json5::from_str` exposed for fuzz harnesses
+    /// that need to avoid a direct dependency on the `json5` crate.
+    ///
+    /// # Errors
+    /// Returns an error if `s` is not valid JSON5 or does not deserialise as
+    /// a string or array-of-strings.
+    pub fn parse_str(s: &str) -> Result<Self, json5::Error> {
+        json5::from_str(s)
+    }
+
     /// Return the program and arguments for executing this hook.
     ///
     /// - `One(cmd)` → `("sh", ["-c", cmd])`
