@@ -1,7 +1,7 @@
 pub mod config;
 pub mod one_or_many;
-mod run_args;
 pub(crate) mod paths;
+mod run_args;
 
 use crate::devcontainers::one_or_many::OneOrMany;
 use crate::provider::Provider;
@@ -122,7 +122,12 @@ impl Devcontainer {
         }
 
         if let Some(hook) = &self.config.post_start_command {
-            exec_hook(provider.as_ref(), hook)?;
+            if !exec_hook(provider.as_ref(), hook)? {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "postStartCommand failed with non-zero exit",
+                ));
+            }
         }
 
         self.post_create()?;
@@ -130,7 +135,12 @@ impl Devcontainer {
         provider.attach()?;
 
         if let Some(hook) = &self.config.post_attach_command {
-            exec_hook(provider.as_ref(), hook)?;
+            if !exec_hook(provider.as_ref(), hook)? {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "postAttachCommand failed with non-zero exit",
+                ));
+            }
         }
 
         if self.config.should_shutdown() {
@@ -169,15 +179,30 @@ impl Devcontainer {
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.on_create_command {
-            exec_hook(provider.as_ref(), hook)?;
+            if !exec_hook(provider.as_ref(), hook)? {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "onCreateCommand failed with non-zero exit",
+                ));
+            }
         }
 
         if let Some(hook) = &self.config.update_content_command {
-            exec_hook(provider.as_ref(), hook)?;
+            if !exec_hook(provider.as_ref(), hook)? {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "updateContentCommand failed with non-zero exit",
+                ));
+            }
         }
 
         if let Some(hook) = &self.config.post_create_command {
-            exec_hook(provider.as_ref(), hook)?;
+            if !exec_hook(provider.as_ref(), hook)? {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "postCreateCommand failed with non-zero exit",
+                ));
+            }
         }
 
         self.copy_gitconfig()?;
@@ -461,9 +486,11 @@ mod tests {
     use super::*;
     use std::cell::RefCell;
 
+    #[allow(clippy::struct_field_names)]
     struct MockProvider {
         exec_calls: RefCell<Vec<String>>,
         exec_raw_calls: RefCell<Vec<(String, Vec<String>)>>,
+        exec_result: bool,
     }
 
     impl MockProvider {
@@ -471,6 +498,15 @@ mod tests {
             Self {
                 exec_calls: RefCell::new(vec![]),
                 exec_raw_calls: RefCell::new(vec![]),
+                exec_result: true,
+            }
+        }
+
+        fn failing() -> Self {
+            Self {
+                exec_calls: RefCell::new(vec![]),
+                exec_raw_calls: RefCell::new(vec![]),
+                exec_result: false,
             }
         }
     }
@@ -498,24 +534,35 @@ mod tests {
             Ok(true)
         }
         fn exists(&self) -> std::io::Result<bool> {
-            Ok(true)
+            Ok(false)
         }
         fn running(&self) -> std::io::Result<bool> {
-            Ok(true)
+            Ok(false)
         }
         fn cp(&self, _: String, _: String) -> std::io::Result<bool> {
             Ok(true)
         }
         fn exec(&self, cmd: String) -> std::io::Result<bool> {
             self.exec_calls.borrow_mut().push(cmd);
-            Ok(true)
+            Ok(self.exec_result)
         }
         fn exec_raw(&self, prog: &str, args: &[&str]) -> std::io::Result<bool> {
             self.exec_raw_calls.borrow_mut().push((
                 prog.to_string(),
                 args.iter().map(|s| (*s).to_string()).collect(),
             ));
-            Ok(true)
+            Ok(self.exec_result)
+        }
+    }
+
+    fn make_devcontainer_with_provider(
+        config: Config,
+        provider: Box<dyn Provider>,
+    ) -> Devcontainer {
+        Devcontainer {
+            config,
+            provider,
+            settings: Settings::default(),
         }
     }
 
@@ -564,5 +611,118 @@ mod tests {
         assert!(result);
         assert!(provider.exec_calls.borrow().is_empty());
         assert!(provider.exec_raw_calls.borrow().is_empty());
+    }
+
+    fn config_with_post_create() -> Config {
+        json5::from_str(
+            r#"{ "name": "test", "image": "alpine", "postCreateCommand": "npm install" }"#,
+        )
+        .unwrap()
+    }
+
+    fn config_with_post_start() -> Config {
+        json5::from_str(r#"{ "name": "test", "image": "alpine", "postStartCommand": "start.sh" }"#)
+            .unwrap()
+    }
+
+    fn config_with_post_attach() -> Config {
+        json5::from_str(
+            r#"{ "name": "test", "image": "alpine", "postAttachCommand": "attach.sh" }"#,
+        )
+        .unwrap()
+    }
+
+    fn config_with_on_create() -> Config {
+        json5::from_str(
+            r#"{ "name": "test", "image": "alpine", "onCreateCommand": "on-create.sh" }"#,
+        )
+        .unwrap()
+    }
+
+    fn config_with_update_content() -> Config {
+        json5::from_str(
+            r#"{ "name": "test", "image": "alpine", "updateContentCommand": "update.sh" }"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn run_aborts_on_post_create_hook_failure() {
+        let dc = make_devcontainer_with_provider(
+            config_with_post_create(),
+            Box::new(MockProvider::failing()),
+        );
+        let err = dc
+            .run(true)
+            .expect_err("run() must fail when postCreateCommand returns false");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("postCreateCommand"),
+            "error message should mention 'postCreateCommand', got: {msg}"
+        );
+    }
+
+    #[test]
+    fn run_aborts_on_post_start_hook_failure() {
+        let dc = make_devcontainer_with_provider(
+            config_with_post_start(),
+            Box::new(MockProvider::failing()),
+        );
+        let err = dc
+            .run(true)
+            .expect_err("run() must fail when postStartCommand returns false");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("postStartCommand"),
+            "error message should mention 'postStartCommand', got: {msg}"
+        );
+    }
+
+    #[test]
+    fn run_aborts_on_post_attach_hook_failure() {
+        let dc = make_devcontainer_with_provider(
+            config_with_post_attach(),
+            Box::new(MockProvider::failing()),
+        );
+        let err = dc
+            .run(true)
+            .expect_err("run() must fail when postAttachCommand returns false");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("postAttachCommand"),
+            "error message should mention 'postAttachCommand', got: {msg}"
+        );
+    }
+
+    #[test]
+    fn run_aborts_on_on_create_hook_failure() {
+        let dc = make_devcontainer_with_provider(
+            config_with_on_create(),
+            Box::new(MockProvider::failing()),
+        );
+        let err = dc
+            .run(true)
+            .expect_err("run() must fail when onCreateCommand returns false");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("onCreateCommand"),
+            "error message should mention 'onCreateCommand', got: {msg}"
+        );
+    }
+
+    #[test]
+    fn run_aborts_on_update_content_hook_failure() {
+        let dc = make_devcontainer_with_provider(
+            config_with_update_content(),
+            Box::new(MockProvider::failing()),
+        );
+        let err = dc
+            .run(true)
+            .expect_err("run() must fail when updateContentCommand returns false");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("updateContentCommand"),
+            "error message should mention 'updateContentCommand', got: {msg}"
+        );
     }
 }
