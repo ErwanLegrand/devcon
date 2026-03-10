@@ -445,6 +445,22 @@ fn validate_mounts(
     Ok(())
 }
 
+/// Resolve the build context directory for Docker/Podman providers.
+///
+/// Uses `build.context` from the config if set (relative paths are joined with `directory`),
+/// otherwise falls back to `directory` (the workspace root).
+fn resolve_build_context(directory: &Path, config: &Config) -> String {
+    let Some(ctx) = config.build.as_ref().and_then(|b| b.context.as_deref()) else {
+        return directory.to_string_lossy().into_owned();
+    };
+    let ctx_path = Path::new(ctx);
+    if ctx_path.is_absolute() {
+        ctx.to_string()
+    } else {
+        directory.join(ctx_path).to_string_lossy().into_owned()
+    }
+}
+
 fn build_provider(
     directory: &Path,
     settings: &Settings,
@@ -476,8 +492,10 @@ fn build_provider(
                     }
                 }
                 validate_mounts(directory, config.mounts.as_ref())?;
+                let build_context = resolve_build_context(directory, config);
                 Ok(Box::new(Docker {
                     build_args: config.build_args(),
+                    build_context,
                     build_source: docker_build_source(directory, config)?,
                     command: "docker".to_string(),
                     directory: directory.to_string_lossy().to_string(),
@@ -517,8 +535,10 @@ fn build_provider(
                     }
                 }
                 validate_mounts(directory, config.mounts.as_ref())?;
+                let build_context = resolve_build_context(directory, config);
                 Ok(Box::new(Podman {
                     build_args: config.build_args(),
+                    build_context,
                     build_source: podman_build_source(directory, config)?,
                     command: "podman".to_string(),
                     directory: directory.to_string_lossy().to_string(),
@@ -632,6 +652,36 @@ mod tests {
             provider,
             settings: Settings::default(),
         }
+    }
+
+    #[test]
+    fn resolve_build_context_defaults_to_directory() {
+        let config: Config = json5::from_str(r#"{ "name": "test", "image": "alpine" }"#).unwrap();
+        let dir = std::path::Path::new("/workspace");
+        let ctx = resolve_build_context(dir, &config);
+        assert_eq!(ctx, "/workspace");
+    }
+
+    #[test]
+    fn resolve_build_context_relative_context_joined_with_directory() {
+        let config: Config = json5::from_str(
+            r#"{ "name": "test", "build": { "dockerfile": "Dockerfile", "context": "subdir" } }"#,
+        )
+        .unwrap();
+        let dir = std::path::Path::new("/workspace");
+        let ctx = resolve_build_context(dir, &config);
+        assert_eq!(ctx, "/workspace/subdir");
+    }
+
+    #[test]
+    fn resolve_build_context_absolute_context_returned_as_is() {
+        let config: Config = json5::from_str(
+            r#"{ "name": "test", "build": { "dockerfile": "Dockerfile", "context": "/abs/ctx" } }"#,
+        )
+        .unwrap();
+        let dir = std::path::Path::new("/workspace");
+        let ctx = resolve_build_context(dir, &config);
+        assert_eq!(ctx, "/abs/ctx");
     }
 
     #[test]

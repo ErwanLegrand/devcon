@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::collections::HashMap;
 use std::env;
 use std::io::Result;
 use std::path::PathBuf;
@@ -9,6 +10,7 @@ struct TemplateContext {
     service: String,
     envs: Vec<TemplateEntry>,
     volumes: Vec<TemplateEntry>,
+    build_args: Vec<TemplateEntry>,
 }
 
 #[derive(Serialize, Debug)]
@@ -55,6 +57,7 @@ pub(crate) fn create_compose_override(
     service: &str,
     env_vars: &[(String, String)],
     selinux_relabel: bool,
+    build_args: &HashMap<String, String>,
 ) -> Result<ComposeOverrideGuard> {
     use std::io::Write;
     use std::os::unix::fs::OpenOptionsExt;
@@ -94,10 +97,20 @@ pub(crate) fn create_compose_override(
         });
     }
 
+    let build_args_entries: Vec<TemplateEntry> = build_args
+        .iter()
+        .map(|(k, v)| TemplateEntry {
+            source: k.clone(),
+            dest: v.clone(),
+            suffix: String::new(),
+        })
+        .collect();
+
     let context = TemplateContext {
         service: service.to_string(),
         envs,
         volumes,
+        build_args: build_args_entries,
     };
 
     let mut tt = TinyTemplate::new();
@@ -186,7 +199,7 @@ mod tests {
 
     #[test]
     fn compose_override_file_has_mode_0o600() {
-        let guard = create_compose_override("test-service", &[], false)
+        let guard = create_compose_override("test-service", &[], false, &HashMap::new())
             .expect("create_compose_override should succeed");
         let mode = std::fs::metadata(&guard.0)
             .expect("metadata should be readable")
@@ -199,13 +212,45 @@ mod tests {
     #[test]
     fn compose_override_file_removed_after_guard_drop() {
         let path = {
-            let guard = create_compose_override("test-service", &[], false)
+            let guard = create_compose_override("test-service", &[], false, &HashMap::new())
                 .expect("create_compose_override should succeed");
             guard.0.clone()
         };
         assert!(
             !path.exists(),
             "file should be deleted after guard is dropped"
+        );
+    }
+
+    #[test]
+    fn compose_override_with_build_args_renders_args_section() {
+        let mut build_args = HashMap::new();
+        build_args.insert("FOO".to_string(), "bar".to_string());
+        let guard = create_compose_override("svc", &[], false, &build_args)
+            .expect("create_compose_override should succeed");
+        let content = std::fs::read_to_string(&guard.0).expect("file should be readable");
+        assert!(
+            content.contains("FOO"),
+            "override should contain build arg key 'FOO', got:\n{content}"
+        );
+        assert!(
+            content.contains("bar"),
+            "override should contain build arg value 'bar', got:\n{content}"
+        );
+        assert!(
+            content.contains("build:"),
+            "override should contain 'build:' section, got:\n{content}"
+        );
+    }
+
+    #[test]
+    fn compose_override_without_build_args_omits_build_section() {
+        let guard = create_compose_override("svc", &[], false, &HashMap::new())
+            .expect("create_compose_override should succeed");
+        let content = std::fs::read_to_string(&guard.0).expect("file should be readable");
+        assert!(
+            !content.contains("build:"),
+            "override without build_args should not contain 'build:' section, got:\n{content}"
         );
     }
 
@@ -220,7 +265,7 @@ mod tests {
 
     #[test]
     fn compose_override_without_selinux_has_no_z_suffix() {
-        let guard = create_compose_override("svc", &[], false)
+        let guard = create_compose_override("svc", &[], false, &HashMap::new())
             .expect("create_compose_override should succeed");
         let content = std::fs::read_to_string(&guard.0).expect("file should be readable");
         assert!(
@@ -237,7 +282,7 @@ mod tests {
         });
         // Only run the assertion when SSH_AUTH_SOCK is set.
         if std::env::var("SSH_AUTH_SOCK").is_ok() {
-            let file_guard = create_compose_override("svc", &[], true)
+            let file_guard = create_compose_override("svc", &[], true, &HashMap::new())
                 .expect("create_compose_override should succeed");
             let content = std::fs::read_to_string(&file_guard.0).expect("file should be readable");
             assert!(

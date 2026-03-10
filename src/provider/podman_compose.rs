@@ -26,7 +26,12 @@ pub struct PodmanCompose {
 
 impl PodmanCompose {
     fn create_docker_compose(&self) -> Result<ComposeOverrideGuard> {
-        create_compose_override(&self.service, &self.env_vars, self.selinux_relabel)
+        create_compose_override(
+            &self.service,
+            &self.env_vars,
+            self.selinux_relabel,
+            &self.build_args,
+        )
     }
 
     fn extract_container_id(output: &str) -> &str {

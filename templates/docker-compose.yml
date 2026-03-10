@@ -11,3 +11,10 @@ services:
     {{ for volume in volumes }}
       - {volume.source}:{volume.dest}{volume.suffix}
     {{ endfor}}
+{{ if build_args }}
+    build:
+      args:
+      {{ for arg in build_args }}
+        {arg.source}: "{arg.dest}"
+      {{ endfor}}
+{{ endif }}

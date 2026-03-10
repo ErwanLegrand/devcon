@@ -237,6 +237,7 @@ fn start_fixture_container(fixture_name: &str, name: &str) -> (String, Container
 fn load_docker_provider(name: &str) -> Docker {
     Docker {
         build_args: std::collections::HashMap::new(),
+        build_context: fixture_path("basic").to_string_lossy().into_owned(),
         build_source: BuildSource::Dockerfile(
             fixture_path("basic")
                 .join("Dockerfile")
@@ -278,6 +279,7 @@ fn load_compose_provider(name: &str) -> DockerCompose {
 fn load_podman_provider(name: &str) -> Podman {
     Podman {
         build_args: std::collections::HashMap::new(),
+        build_context: fixture_path("basic").to_string_lossy().into_owned(),
         build_source: BuildSource::Dockerfile(
             fixture_path("basic")
                 .join(".devcontainer")

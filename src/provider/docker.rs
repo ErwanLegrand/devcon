@@ -20,6 +20,9 @@ pub enum BuildSource {
 #[derive(Debug)]
 pub struct Docker {
     pub build_args: HashMap<String, String>,
+    /// Path sent to the Docker daemon as the build context.
+    /// Defaults to the workspace root; overridden by `build.context` in devcontainer.json.
+    pub build_context: String,
     pub build_source: BuildSource,
     pub command: String,
     pub directory: String,
@@ -49,7 +52,7 @@ impl Provider for Docker {
                     command.arg("--build-arg").arg(format!("{key}={value}"));
                 }
 
-                command.arg(&self.directory);
+                command.arg(&self.build_context);
 
                 print_command(&command);
 
