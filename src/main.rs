@@ -25,6 +25,9 @@ enum Commands {
         /// Suppress the warning when the container will run as root with no remoteUser configured.
         #[arg(long)]
         no_root_check: bool,
+        /// Disable the structured audit log for this invocation.
+        #[arg(long)]
+        no_audit_log: bool,
     },
     Start {
         dir: Option<String>,
@@ -34,6 +37,9 @@ enum Commands {
         /// Suppress the warning when the container will run as root with no remoteUser configured.
         #[arg(long)]
         no_root_check: bool,
+        /// Disable the structured audit log for this invocation.
+        #[arg(long)]
+        no_audit_log: bool,
     },
 }
 
@@ -45,19 +51,27 @@ fn main() -> anyhow::Result<()> {
             dir,
             trust,
             no_root_check,
+            no_audit_log,
         }) => {
-            commands::start::run(dir.as_deref(), *trust, *no_root_check)?;
+            commands::start::run(dir.as_deref(), *trust, *no_root_check, *no_audit_log)?;
         }
         Some(Commands::Rebuild {
             dir,
             no_cache,
             trust,
             no_root_check,
+            no_audit_log,
         }) => {
-            commands::rebuild::run(dir.as_deref(), !no_cache, *trust, *no_root_check)?;
+            commands::rebuild::run(
+                dir.as_deref(),
+                !no_cache,
+                *trust,
+                *no_root_check,
+                *no_audit_log,
+            )?;
         }
         None => {
-            commands::start::run(None, false, false)?;
+            commands::start::run(None, false, false, false)?;
         }
     }
 

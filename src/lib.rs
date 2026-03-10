@@ -9,6 +9,7 @@
 //! The [`provider`] module is public for integration tests but its types are not stable API.
 #![warn(clippy::pedantic)]
 
+pub(crate) mod audit;
 pub mod devcontainers;
 pub mod error;
 pub mod provider;

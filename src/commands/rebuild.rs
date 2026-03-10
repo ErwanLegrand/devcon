@@ -11,15 +11,17 @@ use devcont::devcontainers::Devcontainer;
 /// # Errors
 /// Returns an error if the directory cannot be resolved, the devcontainer config cannot be
 /// loaded, or any lifecycle operation fails.
+#[allow(clippy::fn_params_excessive_bools)]
 pub fn run(
     dir: Option<&str>,
     use_cache: bool,
     trust: bool,
     no_root_check: bool,
+    no_audit_log: bool,
 ) -> std::io::Result<()> {
     let directory = get_project_directory(dir)?;
     let devcontainer = Devcontainer::load(&directory)?;
-    devcontainer.rebuild(use_cache, trust, no_root_check)?;
+    devcontainer.rebuild(use_cache, trust, no_root_check, no_audit_log)?;
 
     Ok(())
 }

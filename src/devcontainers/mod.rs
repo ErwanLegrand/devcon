@@ -3,6 +3,7 @@ pub mod one_or_many;
 pub(crate) mod paths;
 mod run_args;
 
+use crate::audit::{AuditEvent, AuditLogger};
 use crate::devcontainers::one_or_many::OneOrMany;
 use crate::error::{Error, Result};
 use crate::provider::Provider;
@@ -49,6 +50,14 @@ fn exec_host_hook(hook: &OneOrMany) -> std::io::Result<bool> {
         return Ok(status.success());
     }
     Ok(true)
+}
+
+/// Return a displayable string for a hook command (used in audit log entries).
+fn hook_display(hook: &OneOrMany) -> String {
+    match hook {
+        OneOrMany::One(cmd) => cmd.clone(),
+        OneOrMany::Many(parts) => parts.join(" "),
+    }
 }
 
 /// Returns true if `answer` constitutes a positive confirmation (case-insensitive `"y"`).
@@ -135,16 +144,29 @@ impl Devcontainer {
     /// Build, start, and attach to the dev container, running lifecycle hooks.
     ///
     /// If `use_cache` is `false`, the image is built with `--no-cache`.
+    /// Pass `no_audit_log = true` to suppress writing to the audit log.
     ///
     /// # Errors
     /// Returns an error if any provider operation (build, start, attach, etc.) fails.
-    pub fn run(&self, use_cache: bool, trust: bool, no_root_check: bool) -> Result<()> {
+    #[allow(clippy::fn_params_excessive_bools)]
+    pub fn run(
+        &self,
+        use_cache: bool,
+        trust: bool,
+        no_root_check: bool,
+        no_audit_log: bool,
+    ) -> Result<()> {
         run_args::validate_run_args(&self.config.run_args).map_err(Error::InvalidConfig)?;
 
         let container_name = self.config.safe_name()?;
         run_args::validate_container_name(&container_name).map_err(Error::InvalidConfig)?;
 
         run_args::validate_remote_env(&self.config.remote_env).map_err(Error::InvalidConfig)?;
+
+        let audit = AuditLogger::new(no_audit_log);
+        audit.log(&AuditEvent::ContainerStart {
+            container: container_name,
+        });
 
         let provider = &self.provider;
 
@@ -154,6 +176,10 @@ impl Devcontainer {
                     "initializeCommand declined by user".to_string(),
                 ));
             }
+            audit.log(&AuditEvent::HookExecuted {
+                hook: "initializeCommand".to_string(),
+                command: hook_display(hook),
+            });
         }
 
         self.create(use_cache)?;
@@ -169,19 +195,31 @@ impl Devcontainer {
         if let Some(hook) = &self.config.post_start_command {
             exec_hook(provider.as_ref(), hook)
                 .map_err(|e| Error::HookFailed(format!("postStartCommand: {e}")))?;
+            audit.log(&AuditEvent::HookExecuted {
+                hook: "postStartCommand".to_string(),
+                command: hook_display(hook),
+            });
         }
 
-        self.post_create()?;
+        self.post_create(&audit)?;
         provider.restart()?;
         provider.attach()?;
 
         if let Some(hook) = &self.config.post_attach_command {
             exec_hook(provider.as_ref(), hook)
                 .map_err(|e| Error::HookFailed(format!("postAttachCommand: {e}")))?;
+            audit.log(&AuditEvent::HookExecuted {
+                hook: "postAttachCommand".to_string(),
+                command: hook_display(hook),
+            });
         }
 
         if self.config.should_shutdown() {
+            let stop_name = self.config.safe_name().unwrap_or_default();
             provider.stop()?;
+            audit.log(&AuditEvent::ContainerStop {
+                container: stop_name,
+            });
         }
 
         Ok(())
@@ -189,16 +227,31 @@ impl Devcontainer {
 
     /// Stop and remove the existing container, then run it fresh.
     ///
+    /// Pass `no_audit_log = true` to suppress writing to the audit log.
+    ///
     /// # Errors
     /// Returns an error if stopping, removing, or restarting the container fails.
-    pub fn rebuild(&self, use_cache: bool, trust: bool, no_root_check: bool) -> Result<()> {
+    #[allow(clippy::fn_params_excessive_bools)]
+    pub fn rebuild(
+        &self,
+        use_cache: bool,
+        trust: bool,
+        no_root_check: bool,
+        no_audit_log: bool,
+    ) -> Result<()> {
+        let audit = AuditLogger::new(no_audit_log);
+        let container_name = self.config.safe_name().unwrap_or_default();
+        audit.log(&AuditEvent::ContainerRebuild {
+            container: container_name,
+        });
+
         let provider = &self.provider;
         if provider.exists()? {
             provider.stop()?;
             provider.rm()?;
         }
 
-        self.run(use_cache, trust, no_root_check)
+        self.run(use_cache, trust, no_root_check, no_audit_log)
     }
 
     fn create(&self, use_cache: bool) -> Result<()> {
@@ -215,22 +268,34 @@ impl Devcontainer {
         Ok(())
     }
 
-    fn post_create(&self) -> Result<()> {
+    fn post_create(&self, audit: &AuditLogger) -> Result<()> {
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.on_create_command {
             exec_hook(provider.as_ref(), hook)
                 .map_err(|e| Error::HookFailed(format!("onCreateCommand: {e}")))?;
+            audit.log(&AuditEvent::HookExecuted {
+                hook: "onCreateCommand".to_string(),
+                command: hook_display(hook),
+            });
         }
 
         if let Some(hook) = &self.config.update_content_command {
             exec_hook(provider.as_ref(), hook)
                 .map_err(|e| Error::HookFailed(format!("updateContentCommand: {e}")))?;
+            audit.log(&AuditEvent::HookExecuted {
+                hook: "updateContentCommand".to_string(),
+                command: hook_display(hook),
+            });
         }
 
         if let Some(hook) = &self.config.post_create_command {
             exec_hook(provider.as_ref(), hook)
                 .map_err(|e| Error::HookFailed(format!("postCreateCommand: {e}")))?;
+            audit.log(&AuditEvent::HookExecuted {
+                hook: "postCreateCommand".to_string(),
+                command: hook_display(hook),
+            });
         }
 
         self.copy_gitconfig()?;
@@ -757,7 +822,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true, true)
+            .run(true, true, true, true)
             .expect_err("run() must fail when postCreateCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -773,7 +838,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true, true)
+            .run(true, true, true, true)
             .expect_err("run() must fail when postStartCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -789,7 +854,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true, true)
+            .run(true, true, true, true)
             .expect_err("run() must fail when postAttachCommand returns false");
         // The run() aborts on the first exec failure — postAttachCommand or an earlier
         // internal exec (e.g., copy_gitconfig). Either way the error is surfaced.
@@ -803,7 +868,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true, true)
+            .run(true, true, true, true)
             .expect_err("run() must fail when onCreateCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -819,7 +884,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true, true)
+            .run(true, true, true, true)
             .expect_err("run() must fail when updateContentCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -852,14 +917,14 @@ mod tests {
     #[test]
     fn run_succeeds_with_no_hooks() {
         let dc = make_devcontainer_with_provider(config_minimal(), Box::new(MockProvider::new()));
-        dc.run(true, true, true)
+        dc.run(true, true, true, true)
             .expect("run() with no hooks should succeed");
     }
 
     #[test]
     fn run_succeeds_with_all_hooks() {
         let dc = make_devcontainer_with_provider(config_all_hooks(), Box::new(MockProvider::new()));
-        dc.run(true, true, true)
+        dc.run(true, true, true, true)
             .expect("run() with all hooks should succeed");
         // run() completed → at minimum post-start and post-create hooks ran
     }
@@ -868,7 +933,8 @@ mod tests {
     fn run_calls_build_when_container_does_not_exist() {
         // exists_result = false → build + create must be called inside create()
         let dc = make_devcontainer_with_provider(config_minimal(), Box::new(MockProvider::new()));
-        dc.run(true, true, true).expect("run() should succeed");
+        dc.run(true, true, true, true)
+            .expect("run() should succeed");
         // Verify by the absence of error: if build were skipped and create were
         // never called the provider would still return Ok(()) — run() completing
         // successfully is the observable outcome when exists() is false.
@@ -880,7 +946,7 @@ mod tests {
             config_minimal(),
             Box::new(MockProvider::with_existing()),
         );
-        dc.rebuild(true, true, true)
+        dc.rebuild(true, true, true, true)
             .expect("rebuild() should succeed when container already exists");
     }
 
@@ -892,7 +958,7 @@ mod tests {
             config_minimal(),
             Box::new(MockProvider::with_existing()),
         );
-        dc.rebuild(true, true, true)
+        dc.rebuild(true, true, true, true)
             .expect("rebuild() should not fail");
     }
 
@@ -902,7 +968,7 @@ mod tests {
             config_minimal(),
             Box::new(MockProvider::new()), // exists_result = false → no stop/rm
         );
-        dc.rebuild(true, true, true)
+        dc.rebuild(true, true, true, true)
             .expect("rebuild() should succeed when container does not exist");
     }
 
@@ -915,7 +981,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true, true)
+            .run(true, true, true, true)
             .expect_err("run() must fail when postCreateCommand returns false");
         assert!(
             matches!(err, crate::error::Error::HookFailed(_)),
@@ -930,7 +996,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true, true, true)
+            .run(true, true, true, true)
             .expect_err("run() must fail when onCreateCommand fails");
         assert!(
             matches!(err, crate::error::Error::HookFailed(_)),

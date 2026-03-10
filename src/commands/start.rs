@@ -8,10 +8,15 @@ use devcont::devcontainers::Devcontainer;
 /// # Errors
 /// Returns an error if the directory cannot be resolved, the devcontainer config cannot be
 /// loaded, or any lifecycle operation fails.
-pub fn run(dir: Option<&str>, trust: bool, no_root_check: bool) -> std::io::Result<()> {
+pub fn run(
+    dir: Option<&str>,
+    trust: bool,
+    no_root_check: bool,
+    no_audit_log: bool,
+) -> std::io::Result<()> {
     let directory = get_project_directory(dir)?;
     let devcontainer = Devcontainer::load(&directory)?;
-    devcontainer.run(true, trust, no_root_check)?;
+    devcontainer.run(true, trust, no_root_check, no_audit_log)?;
 
     Ok(())
 }
