@@ -81,6 +81,73 @@ pub(crate) fn validate_run_args(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// Validate that a container name produced by `safe_name()` is safe for use in
+/// Docker/Podman filter expressions and container names.
+///
+/// Valid pattern: `^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`
+///
+/// # Errors
+/// Returns `Err(String)` with a description if the name fails validation.
+pub(crate) fn validate_container_name(name: &str) -> Result<(), String> {
+    if name.is_empty() {
+        return Err("container name is empty".to_string());
+    }
+    let mut chars = name.chars();
+    let first = chars.next().unwrap();
+    if !first.is_ascii_alphanumeric() {
+        return Err(format!(
+            "container name '{name}' must start with an alphanumeric character, got '{first}'"
+        ));
+    }
+    for ch in chars {
+        if !matches!(ch, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '.' | '-') {
+            return Err(format!(
+                "container name '{name}' contains invalid character '{ch}'"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Validate `remoteEnv` keys and values.
+///
+/// Keys must match `^[A-Za-z_][A-Za-z0-9_]*$`.
+/// Values must not contain null bytes.
+///
+/// # Errors
+/// Returns `Err(String)` naming the offending key or describing the problem.
+pub(crate) fn validate_remote_env(
+    env: &std::collections::HashMap<String, String>,
+) -> Result<(), String> {
+    for (key, value) in env {
+        // Validate key format
+        if key.is_empty() {
+            return Err("remoteEnv contains an empty key".to_string());
+        }
+        let mut key_chars = key.chars();
+        let first = key_chars.next().unwrap();
+        if !matches!(first, 'A'..='Z' | 'a'..='z' | '_') {
+            return Err(format!(
+                "remoteEnv key '{key}' must start with a letter or underscore, got '{first}'"
+            ));
+        }
+        for ch in key_chars {
+            if !matches!(ch, 'A'..='Z' | 'a'..='z' | '0'..='9' | '_') {
+                return Err(format!(
+                    "remoteEnv key '{key}' contains invalid character '{ch}'"
+                ));
+            }
+        }
+        // Validate value has no null bytes
+        if value.contains('\0') {
+            return Err(format!(
+                "remoteEnv value for key '{key}' contains a null byte"
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,5 +267,67 @@ mod tests {
         let result = validate_run_args(&args);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("privileged"));
+    }
+
+    // container name validation
+    #[test]
+    fn valid_container_name_ok() {
+        assert!(validate_container_name("devcont-my-project").is_ok());
+    }
+
+    #[test]
+    fn container_name_empty_is_err() {
+        assert!(validate_container_name("").is_err());
+    }
+
+    #[test]
+    fn container_name_starts_with_dash_is_err() {
+        assert!(validate_container_name("-foo").is_err());
+    }
+
+    #[test]
+    fn container_name_with_dollar_is_err() {
+        assert!(validate_container_name("foo$bar").is_err());
+    }
+
+    #[test]
+    fn container_name_alphanumeric_dot_dash_ok() {
+        assert!(validate_container_name("abc.1-2_ok").is_ok());
+    }
+
+    // remoteEnv validation
+    #[test]
+    fn valid_env_key_ok() {
+        let mut env = std::collections::HashMap::new();
+        env.insert("MY_VAR".to_string(), "value".to_string());
+        assert!(validate_remote_env(&env).is_ok());
+    }
+
+    #[test]
+    fn env_key_starting_with_digit_is_err() {
+        let mut env = std::collections::HashMap::new();
+        env.insert("1VAR".to_string(), "value".to_string());
+        assert!(validate_remote_env(&env).is_err());
+    }
+
+    #[test]
+    fn env_key_with_hyphen_is_err() {
+        let mut env = std::collections::HashMap::new();
+        env.insert("MY-VAR".to_string(), "value".to_string());
+        assert!(validate_remote_env(&env).is_err());
+    }
+
+    #[test]
+    fn env_value_with_null_byte_is_err() {
+        let mut env = std::collections::HashMap::new();
+        env.insert("MY_VAR".to_string(), "val\0ue".to_string());
+        assert!(validate_remote_env(&env).is_err());
+    }
+
+    #[test]
+    fn env_value_normal_ok() {
+        let mut env = std::collections::HashMap::new();
+        env.insert("MY_VAR".to_string(), "hello world!".to_string());
+        assert!(validate_remote_env(&env).is_ok());
     }
 }

@@ -147,6 +147,12 @@ impl Devcontainer {
         run_args::validate_run_args(&self.config.run_args)
             .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
 
+        run_args::validate_container_name(&self.config.safe_name())
+            .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
+
+        run_args::validate_remote_env(&self.config.remote_env)
+            .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
+
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.initialize_command {
