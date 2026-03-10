@@ -43,6 +43,7 @@ pub(crate) fn create_compose_override(
 ) -> Result<ComposeOverrideGuard> {
     use std::io::Write;
     use std::os::unix::fs::OpenOptionsExt;
+    use std::os::unix::fs::PermissionsExt;
 
     let dir = env::temp_dir();
     let path = dir.join("docker-compose.yml");
@@ -88,7 +89,6 @@ pub(crate) fn create_compose_override(
     file.write_all(rendered.as_bytes())?;
     drop(file);
 
-    use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
 
     Ok(ComposeOverrideGuard(path))
