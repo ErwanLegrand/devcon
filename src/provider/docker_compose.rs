@@ -27,7 +27,7 @@ impl DockerCompose {
 
 impl Provider for DockerCompose {
     fn build(&self, use_cache: bool) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
@@ -35,7 +35,7 @@ impl Provider for DockerCompose {
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("build");
@@ -58,14 +58,14 @@ impl Provider for DockerCompose {
     }
 
     fn start(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("up")
@@ -77,14 +77,14 @@ impl Provider for DockerCompose {
     }
 
     fn stop(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("stop");
@@ -95,14 +95,14 @@ impl Provider for DockerCompose {
     }
 
     fn restart(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("restart");
@@ -113,14 +113,14 @@ impl Provider for DockerCompose {
     }
 
     fn attach(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -137,14 +137,14 @@ impl Provider for DockerCompose {
     }
 
     fn rm(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("down")
@@ -158,6 +158,7 @@ impl Provider for DockerCompose {
     }
 
     fn exists(&self) -> Result<bool> {
+        // Scope to the specific service to avoid false-positives from sibling services.
         let output = Command::new(&self.command)
             .arg("compose")
             .arg("-f")
@@ -166,15 +167,13 @@ impl Provider for DockerCompose {
             .arg(&self.name)
             .arg("ps")
             .arg("-aq")
+            .arg("--format")
+            .arg("json")
+            .arg(&self.service)
             .output()?
             .stdout;
 
-        let value = String::from_utf8(output)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
-
-        Ok(!value.is_empty())
+        Ok(compose_service_exists(output))
     }
 
     fn running(&self) -> Result<bool> {
@@ -199,14 +198,14 @@ impl Provider for DockerCompose {
     }
 
     fn cp(&self, source: String, destination: String) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("cp")
@@ -219,14 +218,14 @@ impl Provider for DockerCompose {
     }
 
     fn exec(&self, cmd: String) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -245,14 +244,14 @@ impl Provider for DockerCompose {
     }
 
     fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
         let mut command = Command::new(&self.command);
         command
             .arg("compose")
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -267,5 +266,47 @@ impl Provider for DockerCompose {
         print_command(&command);
 
         Ok(command.status()?.success())
+    }
+}
+
+/// Returns true if the `docker compose ps --format json` output indicates at least one container.
+///
+/// Handles empty output, JSON `[]`, and `null` as "no container". Any other non-empty content
+/// means a container record was returned. Also handles newline-delimited JSON (one object per line).
+pub(crate) fn compose_service_exists(output: Vec<u8>) -> bool {
+    let text = String::from_utf8(output).unwrap_or_default();
+    let trimmed = text.trim();
+    !matches!(trimmed, "" | "[]" | "null")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compose_service_exists_empty_output_is_false() {
+        assert!(!compose_service_exists(vec![]));
+    }
+
+    #[test]
+    fn compose_service_exists_empty_array_is_false() {
+        assert!(!compose_service_exists(b"[]".to_vec()));
+    }
+
+    #[test]
+    fn compose_service_exists_null_is_false() {
+        assert!(!compose_service_exists(b"null".to_vec()));
+    }
+
+    #[test]
+    fn compose_service_exists_populated_array_is_true() {
+        let json = br#"[{"ID":"abc","Name":"proj-svc-1","State":"running"}]"#;
+        assert!(compose_service_exists(json.to_vec()));
+    }
+
+    #[test]
+    fn compose_service_exists_newline_delimited_object_is_true() {
+        let json = br#"{"ID":"abc","Name":"proj-svc-1","State":"running"}"#;
+        assert!(compose_service_exists(json.to_vec()));
     }
 }

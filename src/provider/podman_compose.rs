@@ -60,14 +60,14 @@ impl PodmanCompose {
 
 impl Provider for PodmanCompose {
     fn build(&self, use_cache: bool) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("build");
@@ -90,14 +90,14 @@ impl Provider for PodmanCompose {
     }
 
     fn start(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("up")
@@ -109,14 +109,14 @@ impl Provider for PodmanCompose {
     }
 
     fn stop(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("stop");
@@ -127,14 +127,14 @@ impl Provider for PodmanCompose {
     }
 
     fn restart(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("restart");
@@ -145,14 +145,14 @@ impl Provider for PodmanCompose {
     }
 
     fn attach(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -169,10 +169,10 @@ impl Provider for PodmanCompose {
     }
 
     fn rm(&self) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
-        command.args(self.rm_args(&_guard.0));
+        command.args(self.rm_args(&guard.0));
 
         print_command(&command);
 
@@ -180,14 +180,17 @@ impl Provider for PodmanCompose {
     }
 
     fn exists(&self) -> Result<bool> {
-        // Use `podman ps -aq` with a project label filter so this works even when
-        // podman-compose is not on the PATH and also catches stopped containers.
+        // Use `podman ps -aq` with project + service label filters so this works even when
+        // podman-compose is not on the PATH, catches stopped containers, and is scoped to
+        // the specific service (not sibling services in the same project).
         let output = Command::new(&self.podman_command)
             .args([
                 "ps",
                 "-aq",
                 "--filter",
                 &format!("label=io.podman.compose.project={}", &self.name),
+                "--filter",
+                &format!("label=com.docker.compose.service={}", &self.service),
             ])
             .output()?
             .stdout;
@@ -248,14 +251,14 @@ impl Provider for PodmanCompose {
     }
 
     fn exec(&self, cmd: String) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -274,14 +277,14 @@ impl Provider for PodmanCompose {
     }
 
     fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool> {
-        let _guard = self.create_docker_compose()?;
+        let guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&_guard.0)
+            .arg(&guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
