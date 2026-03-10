@@ -1,5 +1,6 @@
 pub mod config;
 pub mod one_or_many;
+mod run_args;
 
 use crate::devcontainers::one_or_many::OneOrMany;
 use crate::provider::Provider;
@@ -99,6 +100,9 @@ impl Devcontainer {
     /// # Errors
     /// Returns an error if any provider operation (build, start, attach, etc.) fails.
     pub fn run(&self, use_cache: bool) -> std::io::Result<()> {
+        run_args::validate_run_args(&self.config.run_args)
+            .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
+
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.initialize_command {
