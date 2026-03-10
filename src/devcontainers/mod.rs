@@ -50,6 +50,37 @@ fn exec_host_hook(hook: &OneOrMany) -> std::io::Result<bool> {
     Ok(true)
 }
 
+/// Returns true if `answer` constitutes a positive confirmation (case-insensitive `"y"`).
+fn is_confirmed(answer: &str) -> bool {
+    answer.trim().to_lowercase() == "y"
+}
+
+/// Prompt the user for confirmation before running `initializeCommand` on the host.
+///
+/// When `trust` is true, skips the prompt and runs the hook immediately.
+/// When `trust` is false, prints the command to stderr, reads a `[y/N]` response from stdin,
+/// and returns `false` (without running the hook) if the user declines.
+///
+/// Returns `Ok(false)` to signal that the caller should abort (hook declined or hook failed).
+fn confirm_and_run_host_hook(hook: &OneOrMany, trust: bool) -> std::io::Result<bool> {
+    if trust {
+        eprintln!("initializeCommand trusted, running on host.");
+    } else {
+        let cmd_display = match hook {
+            OneOrMany::One(cmd) => cmd.clone(),
+            OneOrMany::Many(parts) => parts.join(" "),
+        };
+        eprintln!("initializeCommand will run on the host: {cmd_display}");
+        eprint!("Run initializeCommand on host? [y/N] ");
+        let mut answer = String::new();
+        std::io::stdin().read_line(&mut answer)?;
+        if !is_confirmed(&answer) {
+            return Ok(false);
+        }
+    }
+    exec_host_hook(hook)
+}
+
 /// A loaded and configured dev container instance.
 pub struct Devcontainer {
     config: Config,
@@ -102,17 +133,17 @@ impl Devcontainer {
     ///
     /// # Errors
     /// Returns an error if any provider operation (build, start, attach, etc.) fails.
-    pub fn run(&self, use_cache: bool) -> std::io::Result<()> {
+    pub fn run(&self, use_cache: bool, trust: bool) -> std::io::Result<()> {
         run_args::validate_run_args(&self.config.run_args)
             .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
 
         let provider = &self.provider;
 
         if let Some(hook) = &self.config.initialize_command {
-            if !exec_host_hook(hook)? {
+            if !confirm_and_run_host_hook(hook, trust)? {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    "initializeCommand failed",
+                    "initializeCommand declined by user",
                 ));
             }
         }
@@ -155,14 +186,14 @@ impl Devcontainer {
     ///
     /// # Errors
     /// Returns an error if stopping, removing, or restarting the container fails.
-    pub fn rebuild(&self, use_cache: bool) -> std::io::Result<()> {
+    pub fn rebuild(&self, use_cache: bool, trust: bool) -> std::io::Result<()> {
         let provider = &self.provider;
         if provider.exists()? {
             provider.stop()?;
             provider.rm()?;
         }
 
-        self.run(use_cache)
+        self.run(use_cache, trust)
     }
 
     fn create(&self, use_cache: bool) -> std::io::Result<()> {
@@ -655,7 +686,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true)
+            .run(true, true)
             .expect_err("run() must fail when postCreateCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -671,7 +702,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true)
+            .run(true, true)
             .expect_err("run() must fail when postStartCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -687,7 +718,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true)
+            .run(true, true)
             .expect_err("run() must fail when postAttachCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -703,7 +734,7 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true)
+            .run(true, true)
             .expect_err("run() must fail when onCreateCommand returns false");
         let msg = err.to_string();
         assert!(
@@ -719,12 +750,42 @@ mod tests {
             Box::new(MockProvider::failing()),
         );
         let err = dc
-            .run(true)
+            .run(true, true)
             .expect_err("run() must fail when updateContentCommand returns false");
         let msg = err.to_string();
         assert!(
             msg.contains("updateContentCommand"),
             "error message should mention 'updateContentCommand', got: {msg}"
         );
+    }
+
+    #[test]
+    fn is_confirmed_y_lowercase() {
+        assert!(is_confirmed("y"));
+    }
+
+    #[test]
+    fn is_confirmed_y_uppercase() {
+        assert!(is_confirmed("Y"));
+    }
+
+    #[test]
+    fn is_confirmed_y_with_whitespace() {
+        assert!(is_confirmed("  y\n"));
+    }
+
+    #[test]
+    fn is_confirmed_n_is_false() {
+        assert!(!is_confirmed("n"));
+    }
+
+    #[test]
+    fn is_confirmed_empty_is_false() {
+        assert!(!is_confirmed(""));
+    }
+
+    #[test]
+    fn is_confirmed_yes_is_false() {
+        assert!(!is_confirmed("yes"));
     }
 }
