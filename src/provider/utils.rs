@@ -45,8 +45,15 @@ pub(crate) fn create_compose_override(
     use std::os::unix::fs::OpenOptionsExt;
     use std::os::unix::fs::PermissionsExt;
 
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
     let dir = env::temp_dir();
-    let path = dir.join("docker-compose.yml");
+    let count = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let path = dir.join(format!(
+        "docker-compose-{}-{count}.yml",
+        std::process::id()
+    ));
     let mut volumes = vec![];
     let mut envs: Vec<TemplateEntry> = env_vars
         .iter()

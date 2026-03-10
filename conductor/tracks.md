@@ -173,14 +173,14 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Medium Security
 
-## [ ] Track: Security — Sanitise Container Names and Label Values Used in Shell Commands
+## [x] Track: Security — Sanitise Container Names and Label Values Used in Shell Commands
 *Validate safe_name() output and remoteEnv key/value formats against strict character set rules. Reject invalid names with clear errors.*
 *Priority: Medium. From: code_review_thorough.*
 *Link: [./tracks/sec_input_sanitisation_20260309/](./tracks/sec_input_sanitisation_20260309/)*
 
 ---
 
-## [ ] Track: Security — Redact Sensitive Values From Logged Commands
+## [x] Track: Security — Redact Sensitive Values From Logged Commands
 *In print_command, replace `--env KEY=VALUE` values with `***` in printed output. Actual subprocess args are not modified.*
 *Priority: Medium. From: code_review_thorough.*
 *Link: [./tracks/sec_command_redaction_20260309/](./tracks/sec_command_redaction_20260309/)*

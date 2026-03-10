@@ -523,12 +523,14 @@ fn build_provider(
                         validate_build_context(directory, context)?;
                     }
                 }
+                validate_mounts(directory, config.mounts.as_ref())?;
                 Ok(Box::new(Podman {
                     build_args: config.build_args(),
                     build_source: podman_build_source(directory, config)?,
                     command: "podman".to_string(),
                     directory: directory.to_string_lossy().to_string(),
                     forward_ports: config.forward_ports.clone(),
+                    mounts: config.mounts.clone(),
                     name: config.safe_name(),
                     run_args: config.run_args.clone(),
                     override_command: config.override_command,

@@ -16,6 +16,7 @@ pub struct Podman {
     pub command: String,
     pub directory: String,
     pub forward_ports: Vec<u16>,
+    pub mounts: Option<Vec<HashMap<String, String>>>,
     pub name: String,
     pub run_args: Vec<String>,
     pub override_command: bool,
@@ -92,6 +93,18 @@ impl Provider for Podman {
 
         for arg in &self.run_args {
             command.arg(arg);
+        }
+
+        if let Some(mounts) = &self.mounts {
+            for mount in mounts {
+                command.arg("--mount");
+                let m = mount
+                    .iter()
+                    .map(|(k, v)| format!("{k}={v}"))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                command.arg(m);
+            }
         }
 
         command.arg("-it");

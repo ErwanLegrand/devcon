@@ -288,6 +288,7 @@ fn load_podman_provider(name: &str) -> Podman {
         command: "podman".to_string(),
         directory: fixture_path("basic").to_string_lossy().into_owned(),
         forward_ports: vec![],
+        mounts: None,
         name: name.to_string(),
         run_args: vec![],
         user: "root".to_string(),
