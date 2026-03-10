@@ -242,10 +242,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Feature — Configurable Timeout for Lifecycle Hooks
+## [x] Track: Feature — Configurable Timeout for Lifecycle Hooks
 *Add `hookTimeoutSeconds` config field and `--hook-timeout` CLI flag. Abort with named error if any hook exceeds the timeout.*
 *Priority: Medium. From: code_review_thorough.*
-*Link: [./tracks/feature_hook_timeout_20260309/](./tracks/feature_hook_timeout_20260309/)*
+*Link: [./archive/feature_hook_timeout_20260309/](./archive/feature_hook_timeout_20260309/)*
 
 ---
 
@@ -304,10 +304,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Fuzzing
 
-## [ ] Track: Feature — cargo-fuzz Harnesses for Config and OneOrMany Parsing
+## [x] Track: Feature — cargo-fuzz Harnesses for Config and OneOrMany Parsing
 *Implement fuzz_config_parse and fuzz_one_or_many targets. Seed corpus from existing fixtures. CI bounded to 60s per target.*
 *Priority: Medium. From: fuzzing_assessment.*
-*Link: [./tracks/fuzzing_impl_20260309/](./tracks/fuzzing_impl_20260309/)*
+*Link: [./archive/fuzzing_impl_20260309/](./archive/fuzzing_impl_20260309/)*
 
 ---
 
