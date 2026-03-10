@@ -1,6 +1,7 @@
 use serde::Serialize;
 use std::env;
 use std::io::Result;
+use std::path::PathBuf;
 use tinytemplate::TinyTemplate;
 
 #[derive(Serialize, Debug)]
@@ -18,18 +19,33 @@ struct TemplateEntry {
 
 static TEMPLATE: &str = include_str!("../../templates/docker-compose.yml");
 
+/// RAII guard that deletes the compose override file when dropped.
+pub(crate) struct ComposeOverrideGuard(pub(crate) PathBuf);
+
+impl Drop for ComposeOverrideGuard {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
 /// Write a temporary docker-compose override file that forwards the SSH agent
 /// socket into the named `service` container and injects any additional
-/// environment variables, returning the path to the written file.
+/// environment variables, returning a guard that holds the path and deletes
+/// the file on drop.
+///
+/// The file is created with mode 0o600 (owner read/write only).
 ///
 /// # Errors
 /// Returns an error if the template cannot be rendered or the file cannot be written.
 pub(crate) fn create_compose_override(
     service: &str,
     env_vars: &[(String, String)],
-) -> Result<String> {
+) -> Result<ComposeOverrideGuard> {
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+
     let dir = env::temp_dir();
-    let file = dir.join("docker-compose.yml");
+    let path = dir.join("docker-compose.yml");
     let mut volumes = vec![];
     let mut envs: Vec<TemplateEntry> = env_vars
         .iter()
@@ -62,7 +78,49 @@ pub(crate) fn create_compose_override(
     let rendered = tt
         .render("docker-compose.yml", &context)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
-    std::fs::write(&file, rendered)?;
 
-    Ok(file.to_string_lossy().to_string())
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(&path)?;
+    file.write_all(rendered.as_bytes())?;
+    drop(file);
+
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+
+    Ok(ComposeOverrideGuard(path))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn compose_override_file_has_mode_0o600() {
+        let guard = create_compose_override("test-service", &[])
+            .expect("create_compose_override should succeed");
+        let mode = std::fs::metadata(&guard.0)
+            .expect("metadata should be readable")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, 0o600, "expected 0o600, got 0o{mode:o}");
+    }
+
+    #[test]
+    fn compose_override_file_removed_after_guard_drop() {
+        let path = {
+            let guard = create_compose_override("test-service", &[])
+                .expect("create_compose_override should succeed");
+            guard.0.clone()
+        };
+        assert!(
+            !path.exists(),
+            "file should be deleted after guard is dropped"
+        );
+    }
 }

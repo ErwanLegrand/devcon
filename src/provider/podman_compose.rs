@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::io::Result;
+use std::path::Path;
 use std::process::Command;
 
 use super::Provider;
 use super::print_command;
-use super::utils::create_compose_override;
+use super::utils::{ComposeOverrideGuard, create_compose_override};
 
 #[derive(Debug)]
 pub struct PodmanCompose {
@@ -21,7 +22,7 @@ pub struct PodmanCompose {
 }
 
 impl PodmanCompose {
-    fn create_docker_compose(&self) -> Result<String> {
+    fn create_docker_compose(&self) -> Result<ComposeOverrideGuard> {
         create_compose_override(&self.service, &self.env_vars)
     }
 
@@ -43,12 +44,12 @@ impl PodmanCompose {
         ]
     }
 
-    fn rm_args(&self, override_file: &str) -> Vec<String> {
+    fn rm_args(&self, override_file: &Path) -> Vec<String> {
         vec![
             "-f".to_string(),
             self.file.clone(),
             "-f".to_string(),
-            override_file.to_string(),
+            override_file.to_string_lossy().into_owned(),
             "-p".to_string(),
             self.name.clone(),
             "down".to_string(),
@@ -59,14 +60,14 @@ impl PodmanCompose {
 
 impl Provider for PodmanCompose {
     fn build(&self, use_cache: bool) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("build");
@@ -89,14 +90,14 @@ impl Provider for PodmanCompose {
     }
 
     fn start(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("up")
@@ -108,14 +109,14 @@ impl Provider for PodmanCompose {
     }
 
     fn stop(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("stop");
@@ -126,14 +127,14 @@ impl Provider for PodmanCompose {
     }
 
     fn restart(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("restart");
@@ -144,14 +145,14 @@ impl Provider for PodmanCompose {
     }
 
     fn attach(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -168,10 +169,10 @@ impl Provider for PodmanCompose {
     }
 
     fn rm(&self) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
-        command.args(self.rm_args(&docker_override));
+        command.args(self.rm_args(&_guard.0));
 
         print_command(&command);
 
@@ -247,14 +248,14 @@ impl Provider for PodmanCompose {
     }
 
     fn exec(&self, cmd: String) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -273,14 +274,14 @@ impl Provider for PodmanCompose {
     }
 
     fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool> {
-        let docker_override = self.create_docker_compose()?;
+        let _guard = self.create_docker_compose()?;
 
         let mut command = Command::new(&self.command);
         command
             .arg("-f")
             .arg(&self.file)
             .arg("-f")
-            .arg(&docker_override)
+            .arg(&_guard.0)
             .arg("-p")
             .arg(&self.name)
             .arg("exec")
@@ -377,7 +378,7 @@ mod tests {
     #[test]
     fn rm_args_does_not_include_rmi() {
         let p = make_provider("myproject", "app");
-        let args = p.rm_args("/tmp/override.yml");
+        let args = p.rm_args(Path::new("/tmp/override.yml"));
         assert!(
             !args.iter().any(|a| a.contains("--rmi")),
             "rm_args must not contain --rmi, got: {args:?}"
@@ -387,7 +388,7 @@ mod tests {
     #[test]
     fn rm_args_includes_down_and_remove_orphans() {
         let p = make_provider("myproject", "app");
-        let args = p.rm_args("/tmp/override.yml");
+        let args = p.rm_args(Path::new("/tmp/override.yml"));
         assert!(
             args.iter().any(|a| a == "down"),
             "rm_args must include 'down'"
@@ -401,7 +402,7 @@ mod tests {
     #[test]
     fn rm_args_includes_project_name() {
         let p = make_provider("projname", "app");
-        let args = p.rm_args("/override.yml");
+        let args = p.rm_args(Path::new("/override.yml"));
         let p_idx = args.iter().position(|a| a == "-p").expect("-p missing");
         assert_eq!(args[p_idx + 1], "projname");
     }
