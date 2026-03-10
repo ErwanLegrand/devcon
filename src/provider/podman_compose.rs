@@ -7,6 +7,7 @@ use super::Provider;
 use super::print_command;
 use super::utils::{ComposeOverrideGuard, create_compose_override};
 
+/// Podman Compose provider — manages containers via `podman-compose`.
 #[derive(Debug)]
 pub struct PodmanCompose {
     pub build_args: HashMap<String, String>,

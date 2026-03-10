@@ -127,6 +127,10 @@ pub(crate) fn redact_env_args(args: &[&str]) -> Vec<String> {
     redacted
 }
 
+/// Print a formatted, redacted command line to stdout.
+///
+/// `--env KEY=VALUE` values are replaced with `KEY=***` to avoid leaking secrets in terminal
+/// output. The actual subprocess arguments are not modified.
 pub(crate) fn print_command(command: &std::process::Command) {
     let exec = command.get_program();
     let raw_args: Vec<&str> = command

@@ -6,6 +6,7 @@ use super::Provider;
 use super::print_command;
 use super::utils::{ComposeOverrideGuard, create_compose_override};
 
+/// Docker Compose provider — manages containers via `docker compose`.
 #[derive(Debug)]
 pub struct DockerCompose {
     pub build_args: HashMap<String, String>,

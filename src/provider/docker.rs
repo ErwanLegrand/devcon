@@ -17,6 +17,7 @@ pub enum BuildSource {
     Image(String),
 }
 
+/// Docker provider — uses the `docker` CLI to manage dev containers.
 #[derive(Debug)]
 pub struct Docker {
     pub build_args: HashMap<String, String>,

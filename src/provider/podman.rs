@@ -9,6 +9,7 @@ use crate::provider::docker::{BuildSource, exact_name_match};
 
 const IMAGE_NAMESPACE: &str = "devcont";
 
+/// Podman provider — uses the `podman` CLI to manage dev containers.
 #[derive(Debug)]
 pub struct Podman {
     pub build_args: HashMap<String, String>,

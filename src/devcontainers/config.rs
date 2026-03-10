@@ -23,33 +23,52 @@ impl Default for ShutdownAction {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
+    /// Project name — used to derive the container name via [`Config::safe_name`].
     name: String,
+    /// Pre-built image to pull instead of building from a Dockerfile.
     pub image: Option<String>,
+    /// Build configuration (`dockerfile`, `context`, `args`).
     pub build: Option<Build>,
+    /// Host ports to forward into the container.
     #[serde(default)]
     pub forward_ports: Vec<u16>,
+    /// Host-side hook run before the container is created.
     pub initialize_command: Option<OneOrMany>,
+    /// In-container hook run once when the container is first created.
     pub on_create_command: Option<OneOrMany>,
+    /// In-container hook run when content changes (e.g., re-clone).
     pub update_content_command: Option<OneOrMany>,
+    /// In-container hook run after the container is created.
     pub post_create_command: Option<OneOrMany>,
+    /// In-container hook run every time the container starts.
     pub post_start_command: Option<OneOrMany>,
+    /// In-container hook run after attaching to the container.
     pub post_attach_command: Option<OneOrMany>,
+    /// User to run commands as inside the container. Defaults to `"root"`.
     #[serde(default = "default_remote_user")]
     pub remote_user: String,
+    /// Extra arguments forwarded to `docker run` / `podman run`.
     #[serde(default)]
     pub run_args: Vec<String>,
+    /// When `true`, overrides the container's default command with the shell.
     #[serde(default)]
     pub override_command: bool,
+    /// Volume mount definitions for the container.
     pub mounts: Option<Vec<HashMap<String, String>>>,
+    /// Environment variables injected into the container.
     #[serde(default)]
     pub remote_env: HashMap<String, String>,
+    /// Path to the `docker-compose.yml` file (enables Compose mode).
     pub docker_compose_file: Option<String>,
+    /// Compose service name (required when `dockerComposeFile` is set).
     pub service: Option<String>,
     /// Override `SELinux` auto-detection for SSH socket relabelling (`:z`).
     /// When absent, `SELinux` enforcing mode is detected at runtime.
     pub selinux_relabel: Option<bool>,
+    /// Working directory inside the container. Defaults to `"/workspace"`.
     #[serde(default = "default_workspace_folder")]
     pub workspace_folder: String,
+    /// Container shutdown behaviour when the session ends.
     #[serde(default)]
     shutdown_action: ShutdownAction,
 }
@@ -58,12 +77,11 @@ pub struct Config {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Build {
+    /// Path to the Dockerfile relative to `context` (or the workspace root if `context` is absent).
     pub dockerfile: Option<String>,
-    // Dev Containers spec §build.context — path from which docker build is run.
-    // Parsed from devcontainer.json but not yet wired into providers; tracked in
-    // conductor/tracks/code_inventory_20260228/findings.md (Item 3, Retain).
+    /// Directory sent to the daemon as the build context. Defaults to the workspace root.
     pub context: Option<String>,
-
+    /// Build-time arguments passed as `--build-arg KEY=VALUE`.
     #[serde(default)]
     pub args: HashMap<String, String>,
 }
