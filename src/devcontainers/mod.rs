@@ -9,6 +9,7 @@ use crate::provider::docker::{BuildSource, Docker};
 use crate::provider::docker_compose::DockerCompose;
 use crate::provider::podman::Podman;
 use crate::provider::podman_compose::PodmanCompose;
+use crate::provider::utils::resolve_dockerfile_path;
 use crate::settings::Settings;
 use config::Config;
 use paths::validate_within_root;
@@ -333,7 +334,9 @@ fn compose_path_and_service(
 
 fn docker_build_source(directory: &Path, config: &Config) -> std::io::Result<BuildSource> {
     if let Some(dockerfile) = config.dockerfile() {
-        let validated = validate_within_root(directory, Path::new(&dockerfile))?;
+        let context = config.build.as_ref().and_then(|b| b.context.as_deref());
+        let resolved = resolve_dockerfile_path(directory, &dockerfile, context);
+        let validated = validate_within_root(directory, &resolved)?;
         Ok(BuildSource::Dockerfile(
             validated.to_string_lossy().to_string(),
         ))
@@ -346,10 +349,9 @@ fn docker_build_source(directory: &Path, config: &Config) -> std::io::Result<Bui
 
 fn podman_build_source(directory: &Path, config: &Config) -> std::io::Result<BuildSource> {
     if let Some(dockerfile) = config.dockerfile() {
-        // Podman resolves dockerfile relative to the .devcontainer subdirectory,
-        // but still validates that the final path stays within the workspace root.
-        let devcontainer_dir = directory.join(".devcontainer");
-        let validated = validate_within_root(directory, &devcontainer_dir.join(&dockerfile))?;
+        let context = config.build.as_ref().and_then(|b| b.context.as_deref());
+        let resolved = resolve_dockerfile_path(directory, &dockerfile, context);
+        let validated = validate_within_root(directory, &resolved)?;
         Ok(BuildSource::Dockerfile(
             validated.to_string_lossy().to_string(),
         ))

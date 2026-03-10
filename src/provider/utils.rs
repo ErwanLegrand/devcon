@@ -94,10 +94,68 @@ pub(crate) fn create_compose_override(
     Ok(ComposeOverrideGuard(path))
 }
 
+/// Resolve the Dockerfile path from config, relative to `context` if provided,
+/// otherwise relative to `workspace`.
+///
+/// Absolute paths are returned unchanged.
+///
+/// # Errors
+/// Returns an error if the resulting path would escape the workspace root (validated
+/// by the caller, e.g. via `validate_within_root`).
+pub(crate) fn resolve_dockerfile_path(
+    workspace: &std::path::Path,
+    dockerfile: &str,
+    context: Option<&str>,
+) -> std::path::PathBuf {
+    let dockerfile_path = std::path::Path::new(dockerfile);
+    if dockerfile_path.is_absolute() {
+        return dockerfile_path.to_path_buf();
+    }
+    let base = if let Some(ctx) = context {
+        let ctx_path = std::path::Path::new(ctx);
+        if ctx_path.is_absolute() {
+            ctx_path.to_path_buf()
+        } else {
+            workspace.join(ctx_path)
+        }
+    } else {
+        workspace.to_path_buf()
+    };
+    base.join(dockerfile_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn resolve_dockerfile_no_context_relative_to_workspace() {
+        let ws = std::path::Path::new("/ws");
+        let result = resolve_dockerfile_path(ws, "Dockerfile", None);
+        assert_eq!(result, std::path::PathBuf::from("/ws/Dockerfile"));
+    }
+
+    #[test]
+    fn resolve_dockerfile_with_relative_context() {
+        let ws = std::path::Path::new("/ws");
+        let result = resolve_dockerfile_path(ws, "Dockerfile", Some("subdir"));
+        assert_eq!(result, std::path::PathBuf::from("/ws/subdir/Dockerfile"));
+    }
+
+    #[test]
+    fn resolve_dockerfile_with_absolute_context() {
+        let ws = std::path::Path::new("/ws");
+        let result = resolve_dockerfile_path(ws, "Dockerfile", Some("/other/ctx"));
+        assert_eq!(result, std::path::PathBuf::from("/other/ctx/Dockerfile"));
+    }
+
+    #[test]
+    fn resolve_dockerfile_absolute_path_returned_unchanged() {
+        let ws = std::path::Path::new("/ws");
+        let result = resolve_dockerfile_path(ws, "/abs/Dockerfile", Some("ctx"));
+        assert_eq!(result, std::path::PathBuf::from("/abs/Dockerfile"));
+    }
 
     #[test]
     fn compose_override_file_has_mode_0o600() {
