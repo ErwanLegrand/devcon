@@ -1,6 +1,7 @@
 pub mod config;
 pub mod one_or_many;
 mod run_args;
+pub(crate) mod paths;
 
 use crate::devcontainers::one_or_many::OneOrMany;
 use crate::provider::Provider;
@@ -10,6 +11,7 @@ use crate::provider::podman::Podman;
 use crate::provider::podman_compose::PodmanCompose;
 use crate::settings::Settings;
 use config::Config;
+use paths::validate_within_root;
 use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
@@ -306,8 +308,10 @@ fn compose_path_and_service(
 
 fn docker_build_source(directory: &Path, config: &Config) -> std::io::Result<BuildSource> {
     if let Some(dockerfile) = config.dockerfile() {
-        let path = directory.join(dockerfile);
-        Ok(BuildSource::Dockerfile(path.to_string_lossy().to_string()))
+        let validated = validate_within_root(directory, Path::new(&dockerfile))?;
+        Ok(BuildSource::Dockerfile(
+            validated.to_string_lossy().to_string(),
+        ))
     } else if let Some(image) = config.image.clone() {
         Ok(BuildSource::Image(image))
     } else {
@@ -317,13 +321,59 @@ fn docker_build_source(directory: &Path, config: &Config) -> std::io::Result<Bui
 
 fn podman_build_source(directory: &Path, config: &Config) -> std::io::Result<BuildSource> {
     if let Some(dockerfile) = config.dockerfile() {
-        let path = directory.join(".devcontainer").join(dockerfile);
-        Ok(BuildSource::Dockerfile(path.to_string_lossy().to_string()))
+        // Podman resolves dockerfile relative to the .devcontainer subdirectory,
+        // but still validates that the final path stays within the workspace root.
+        let devcontainer_dir = directory.join(".devcontainer");
+        let validated = validate_within_root(directory, &devcontainer_dir.join(&dockerfile))?;
+        Ok(BuildSource::Dockerfile(
+            validated.to_string_lossy().to_string(),
+        ))
     } else if let Some(image) = config.image.clone() {
         Ok(BuildSource::Image(image))
     } else {
         Err(missing_field("build.dockerfile or image"))
     }
+}
+
+/// Validate `build.context` against the workspace root (FR-003).
+///
+/// Relative contexts must resolve within `root`. Absolute contexts outside `root`
+/// emit a warning but are allowed through (they may be intentional host mounts).
+fn validate_build_context(root: &Path, context: &str) -> std::io::Result<()> {
+    let context_path = Path::new(context);
+    if context_path.is_absolute() {
+        if validate_within_root(root, context_path).is_err() {
+            eprintln!(
+                "warning: build.context '{}' is absolute and outside workspace root '{}'",
+                context,
+                root.display()
+            );
+        }
+        Ok(())
+    } else {
+        validate_within_root(root, context_path).map(|_| ())
+    }
+}
+
+/// Validate relative mount sources against the workspace root (FR-004).
+///
+/// For each mount entry, if the `"source"` key is present and the path is
+/// relative, it must resolve within `root`. Absolute source paths pass through.
+fn validate_mounts(
+    root: &Path,
+    mounts: Option<&Vec<std::collections::HashMap<String, String>>>,
+) -> std::io::Result<()> {
+    if let Some(mount_list) = mounts {
+        for mount in mount_list {
+            if let Some(source) = mount.get("source") {
+                let source_path = Path::new(source);
+                if !source_path.is_absolute() {
+                    validate_within_root(root, source_path).map(|_| ())?;
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn build_provider(
@@ -347,6 +397,12 @@ fn build_provider(
                     workspace_folder: config.workspace_folder.clone(),
                 }))
             } else {
+                if let Some(build) = &config.build {
+                    if let Some(context) = &build.context {
+                        validate_build_context(directory, context)?;
+                    }
+                }
+                validate_mounts(directory, config.mounts.as_ref())?;
                 Ok(Box::new(Docker {
                     build_args: config.build_args(),
                     build_source: docker_build_source(directory, config)?,
@@ -378,6 +434,11 @@ fn build_provider(
                     workspace_folder: config.workspace_folder.clone(),
                 }))
             } else {
+                if let Some(build) = &config.build {
+                    if let Some(context) = &build.context {
+                        validate_build_context(directory, context)?;
+                    }
+                }
                 Ok(Box::new(Podman {
                     build_args: config.build_args(),
                     build_source: podman_build_source(directory, config)?,
