@@ -274,10 +274,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Test Coverage
 
-## [ ] Track: Tests — Devcontainer Lifecycle run(), rebuild(), All Hook Paths
+## [x] Track: Tests — Devcontainer Lifecycle run(), rebuild(), All Hook Paths
 *Unit tests for run() and rebuild() using MockProvider. Happy path + each hook failure mode. Target ≥80% line coverage for mod.rs.*
 *Priority: Medium. From: test_coverage_assessment.*
-*Link: [./tracks/test_devcontainer_lifecycle_20260309/](./tracks/test_devcontainer_lifecycle_20260309/)*
+*Link: [./archive/test_devcontainer_lifecycle_20260309/](./archive/test_devcontainer_lifecycle_20260309/)*
 
 ---
 
