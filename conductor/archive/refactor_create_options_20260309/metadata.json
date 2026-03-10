@@ -1,0 +1,7 @@
+{
+  "id": "refactor_create_options_20260309",
+  "title": "Refactor: Extract ContainerOptions Struct to Decouple Devcontainer From Provider Args",
+  "status": "planned",
+  "priority": "medium",
+  "created": "2026-03-09"
+}

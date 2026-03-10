@@ -205,7 +205,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Medium Architecture
 
-## [ ] Track: Refactor — Introduce Typed Error Enum Instead of io::Error for All Failures
+## [x] Track: Refactor — Introduce Typed Error Enum Instead of io::Error for All Failures
 *Replace all `io::Error::new(Other, ...)` call sites with named `Error` enum variants. Add HookFailed, InvalidConfig, ProviderError, PathError variants.*
 *Priority: Medium. From: code_review_thorough + arch_review_stride.*
 *Link: [./tracks/refactor_error_taxonomy_20260309/](./tracks/refactor_error_taxonomy_20260309/)*
@@ -219,10 +219,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Refactor — Extract ContainerOptions Struct
+## [x] Track: Refactor — Extract ContainerOptions Struct
 *Extract ContainerOptions from inline argument assembly in run()/rebuild(). All four provider create() methods accept &ContainerOptions.*
 *Priority: Medium. From: arch_review_stride.*
-*Link: [./tracks/refactor_create_options_20260309/](./tracks/refactor_create_options_20260309/)*
+*Link: [./archive/refactor_create_options_20260309/](./archive/refactor_create_options_20260309/)*
 
 ---
 
@@ -281,21 +281,21 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Tests — exec_host_hook, OneOrMany, safe_name, and Utility Functions
+## [x] Track: Tests — exec_host_hook, OneOrMany, safe_name, and Utility Functions
 *Targeted tests for exec_host_hook (real process calls), OneOrMany edge cases (null/integer/nested), safe_name, and Config::parse error paths.*
 *Priority: Medium. From: test_coverage_assessment.*
 *Link: [./tracks/test_exec_host_hook_and_utils_20260309/](./tracks/test_exec_host_hook_and_utils_20260309/)*
 
 ---
 
-## [ ] Track: Tests — PodmanCompose Provider Unit Coverage
+## [x] Track: Tests — PodmanCompose Provider Unit Coverage
 *Arg construction and output parsing tests for PodmanCompose. Target ≥70% line coverage for podman_compose.rs.*
 *Priority: Medium. From: test_coverage_assessment.*
 *Link: [./tracks/test_podman_compose_integration_20260309/](./tracks/test_podman_compose_integration_20260309/)*
 
 ---
 
-## [ ] Track: Tests — Config and Settings Full Field Coverage
+## [x] Track: Tests — Config and Settings Full Field Coverage
 *One test per devcontainer.json field (all 17). All Settings engine variants. Target ≥85% for config.rs, ≥80% for settings.rs.*
 *Priority: Medium. From: test_coverage_assessment.*
 *Link: [./tracks/test_config_settings_gaps_20260309/](./tracks/test_config_settings_gaps_20260309/)*
@@ -313,7 +313,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ### Documentation
 
-## [ ] Track: Docs — Fill Rustdoc Gaps on Public and Complex Functions
+## [x] Track: Docs — Fill Rustdoc Gaps on Public and Complex Functions
 *Add //! crate doc, /// on print_command/run/rebuild, provider struct docs, Config/Build field docs, exec_host_hook doc. cargo doc --no-deps must be warning-free.*
 *Priority: Low. From: documentation_assessment.*
 *Link: [./tracks/rustdoc_gaps_20260309/](./tracks/rustdoc_gaps_20260309/)*
