@@ -537,12 +537,9 @@ fn test_docker_exec() {
     provider.build(true).expect("build() failed");
     provider.create(vec![]).expect("create() failed");
     provider.start().expect("start() failed");
-    assert!(
-        provider
-            .exec("echo hello".to_string())
-            .expect("exec() failed"),
-        "exec() should succeed"
-    );
+    provider
+        .exec("echo hello".to_string())
+        .expect("exec() should succeed");
 }
 
 /// `cp()` copies a host file into the container; the file is then present.
@@ -571,12 +568,9 @@ fn test_docker_cp() {
             .expect("cp() failed"),
         "cp() should succeed"
     );
-    assert!(
-        provider
-            .exec(format!("test -f {dest}"))
-            .expect("exec() failed"),
-        "file should exist in container after cp"
-    );
+    provider
+        .exec(format!("test -f {dest}"))
+        .expect("exec(): file should exist in container after cp");
 
     // Clean up host temp file.
     std::fs::remove_file(&src).ok();
@@ -656,12 +650,9 @@ fn test_compose_exec() {
 
     provider.build(true).expect("build() failed");
     provider.start().expect("start() failed");
-    assert!(
-        provider
-            .exec("echo hello".to_string())
-            .expect("exec() failed"),
-        "exec() should succeed"
-    );
+    provider
+        .exec("echo hello".to_string())
+        .expect("exec() should succeed");
 }
 
 /// `cp()` copies a host file into the service container.
@@ -686,12 +677,9 @@ fn test_compose_cp() {
             .expect("cp() failed"),
         "cp() should succeed"
     );
-    assert!(
-        provider
-            .exec(format!("test -f {dest}"))
-            .expect("exec() failed"),
-        "file should exist in container after cp"
-    );
+    provider
+        .exec(format!("test -f {dest}"))
+        .expect("exec(): file should exist in container after cp");
 
     std::fs::remove_file(&src).ok();
 }
@@ -843,12 +831,9 @@ fn test_podman_exec() {
     provider.build(true).expect("build() failed");
     provider.create(vec![]).expect("create() failed");
     provider.start().expect("start() failed");
-    assert!(
-        provider
-            .exec("echo hello".to_string())
-            .expect("exec() failed"),
-        "exec() should succeed"
-    );
+    provider
+        .exec("echo hello".to_string())
+        .expect("exec() should succeed");
 }
 
 /// `cp()` copies a host file into the container; the file is then present.
@@ -875,12 +860,9 @@ fn test_podman_cp() {
             .expect("cp() failed"),
         "cp() should succeed"
     );
-    assert!(
-        provider
-            .exec(format!("test -f {dest}"))
-            .expect("exec() failed"),
-        "file should exist in container after cp"
-    );
+    provider
+        .exec(format!("test -f {dest}"))
+        .expect("exec(): file should exist in container after cp");
 
     std::fs::remove_file(&src).ok();
 }
@@ -973,12 +955,9 @@ fn test_podman_compose_exec() {
 
     provider.build(true).expect("build() failed");
     provider.start().expect("start() failed");
-    assert!(
-        provider
-            .exec("echo hello".to_string())
-            .expect("exec() failed"),
-        "exec() should succeed"
-    );
+    provider
+        .exec("echo hello".to_string())
+        .expect("exec() should succeed");
 }
 
 /// `cp()` copies a host file into the service container.
@@ -1011,12 +990,9 @@ fn test_podman_compose_cp() {
             .expect("cp() failed"),
         "cp() should succeed"
     );
-    assert!(
-        provider
-            .exec(format!("test -f {dest}"))
-            .expect("exec() failed"),
-        "file should exist in container after cp"
-    );
+    provider
+        .exec(format!("test -f {dest}"))
+        .expect("exec(): file should exist in container after cp");
 
     std::fs::remove_file(&src).ok();
 }

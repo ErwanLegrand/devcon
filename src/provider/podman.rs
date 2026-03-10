@@ -212,7 +212,7 @@ impl Provider for Podman {
         Ok(command.status()?.success())
     }
 
-    fn exec(&self, cmd: String) -> Result<bool> {
+    fn exec(&self, cmd: String) -> Result<()> {
         let mut command = Command::new(&self.command);
         command
             .arg("exec")
@@ -227,10 +227,18 @@ impl Provider for Podman {
 
         print_command(&command);
 
-        Ok(command.status()?.success())
+        let status = command.status()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("exec failed with exit code {}", status.code().unwrap_or(-1)),
+            ))
+        }
     }
 
-    fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool> {
+    fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<()> {
         let mut command = Command::new(&self.command);
         command
             .arg("exec")
@@ -244,6 +252,17 @@ impl Provider for Podman {
 
         print_command(&command);
 
-        Ok(command.status()?.success())
+        let status = command.status()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!(
+                    "exec_raw failed with exit code {}",
+                    status.code().unwrap_or(-1)
+                ),
+            ))
+        }
     }
 }

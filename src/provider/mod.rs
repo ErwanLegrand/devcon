@@ -67,8 +67,9 @@ pub trait Provider {
     /// path arguments to prevent word-splitting.
     ///
     /// # Errors
-    /// Returns an error if the underlying exec command fails to spawn or exits with an error.
-    fn exec(&self, cmd: String) -> Result<bool>;
+    /// Returns an error if the underlying exec command fails to spawn or exits with a non-zero
+    /// status. The exit code is included in the error message.
+    fn exec(&self, cmd: String) -> Result<()>;
     /// Execute a program directly inside the container without a shell wrapper.
     ///
     /// `prog` is the executable to run; `args` are its arguments passed as
@@ -76,8 +77,9 @@ pub trait Provider {
     /// Use this for the array form of lifecycle hooks (`Many` variant).
     ///
     /// # Errors
-    /// Returns an error if the underlying exec command fails to spawn or exits with an error.
-    fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<bool>;
+    /// Returns an error if the underlying exec command fails to spawn or exits with a non-zero
+    /// status. The exit code is included in the error message.
+    fn exec_raw(&self, prog: &str, args: &[&str]) -> Result<()>;
 }
 
 /// Redact the values of `--env` / `-e` arguments in a list of command-line tokens.
