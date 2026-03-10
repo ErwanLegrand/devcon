@@ -21,6 +21,15 @@ impl OneOrMany {
     /// # Errors
     /// Returns an error if `s` is not valid JSON5 or does not deserialise as
     /// a string or array-of-strings.
+    ///
+    /// # Examples
+    /// ```
+    /// use devcont::devcontainers::one_or_many::OneOrMany;
+    /// let h = OneOrMany::parse_str(r#""npm install""#).unwrap();
+    /// assert!(matches!(h, OneOrMany::One(_)));
+    /// let h = OneOrMany::parse_str(r#"["npm", "install"]"#).unwrap();
+    /// assert!(matches!(h, OneOrMany::Many(_)));
+    /// ```
     pub fn parse_str(s: &str) -> Result<Self, json5::Error> {
         json5::from_str(s)
     }

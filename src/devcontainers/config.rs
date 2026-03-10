@@ -107,6 +107,12 @@ impl Config {
     /// # Errors
     /// Returns [`Error::ConfigParse`] if the content is not valid JSON5 or does
     /// not match the expected schema.
+    ///
+    /// # Examples
+    /// ```
+    /// use devcont::devcontainers::config::Config;
+    /// let c = Config::parse_str(r#"{"name":"my-app","image":"ubuntu:24.04"}"#).unwrap();
+    /// ```
     pub fn parse_str(s: &str) -> Result<Config> {
         json5::from_str(s).map_err(|e| Error::ConfigParse(e.to_string()))
     }

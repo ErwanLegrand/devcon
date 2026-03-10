@@ -65,6 +65,9 @@ fn exec_host_hook(hook: &OneOrMany, timeout_secs: Option<u32>) -> std::io::Resul
             return Ok(status.success());
         }
         if std::time::Instant::now() >= deadline {
+            // SIGKILL directly — no SIGTERM grace period. Lifecycle hooks are
+            // expected to be short-lived; a two-stage kill adds complexity for
+            // minimal practical benefit in this context.
             let _ = child.kill();
             let _ = child.wait();
             return Err(std::io::Error::new(
@@ -179,6 +182,11 @@ impl Devcontainer {
     /// Override the hook timeout for this instance (typically from `--hook-timeout` CLI flag).
     ///
     /// Calling this replaces any `hookTimeoutSeconds` value from `devcontainer.json`.
+    ///
+    /// **Note:** The timeout is currently enforced only on host-side hooks
+    /// (`initializeCommand`). In-container hooks (`postCreateCommand`,
+    /// `postStartCommand`, `postAttachCommand`, `onCreateCommand`,
+    /// `updateContentCommand`) are not yet subject to this timeout.
     #[must_use]
     pub fn with_hook_timeout(mut self, secs: u32) -> Self {
         self.hook_timeout_secs = Some(secs);
